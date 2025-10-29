@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_SERVICE_KEY, DISCORD_GUILD_ID } from '$env/static/private';
+import { SUPABASE_URL, SUPABASE_SERVICE_KEY, DISCORD_GUILD_ID } from '$env/dynamic/private';
 import { createClient } from '@supabase/supabase-js';
 import { createTemporaryChannel, setupChannelAndRoles } from '$lib/server/discord-api';
 

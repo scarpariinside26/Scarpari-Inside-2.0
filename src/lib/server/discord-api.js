@@ -6,7 +6,7 @@ import {
     DISCORD_BLUE_ROLE_ID,
     DISCORD_YELLOW_ROLE_ID,
     DISCORD_BLACK_ROLE_ID 
-} from '$env/static/private';
+} from '$env/dynamic/private'; 
 
 const DISCORD_API = 'https://discord.com/api/v10';
 

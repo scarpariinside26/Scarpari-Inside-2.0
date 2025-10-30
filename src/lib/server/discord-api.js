@@ -6,25 +6,17 @@ import {
     DISCORD_BLUE_ROLE_ID,
     DISCORD_YELLOW_ROLE_ID,
     DISCORD_BLACK_ROLE_ID 
-} from '$env/dynamic/private'; 
+} from '$env/dynamic/private'; // Usa dynamic per risolvere gli errori di build
 
 const DISCORD_API = 'https://discord.com/api/v10';
 
 // =================================================================
 // FUNZIONE 1: CREAZIONE CANALE
 // =================================================================
-
-/**
- * Crea un canale di testo temporaneo sotto la categoria specificata, nascondendolo a @everyone.
- * @param {string} matchSlug - Nome unico del canale (es: "partita-martedi-2000")
- * @param {string} matchOwnerId - L'ID Discord dell'utente che ha creato l'evento
- * @returns {Promise<string>} L'ID del canale appena creato
- */
 export async function createTemporaryChannel(matchSlug, matchOwnerId) {
     const channelName = matchSlug.toLowerCase().replace(/[^a-z0-9-]/g, '-');
     const endpoint = `${DISCORD_API}/guilds/${DISCORD_GUILD_ID}/channels`;
 
-    // Permessi iniziali: @everyone non può vedere (deny: 1 << 10), l'admin può
     const initialPerms = [
         {
             id: DISCORD_GUILD_ID,
@@ -34,7 +26,7 @@ export async function createTemporaryChannel(matchSlug, matchOwnerId) {
         },
         {
             id: matchOwnerId,
-            type: 1, // Tipo: Member (Admin)
+            type: 1, // Tipo: Member (Admin che deve vedere il canale subito)
             allow: (1 << 10), // VIEW_CHANNEL
             deny: 0,
         }
@@ -65,12 +57,6 @@ export async function createTemporaryChannel(matchSlug, matchOwnerId) {
 // =================================================================
 // FUNZIONE 2: ASSEGNAZIONE RUOLI E SBLOCCO CANALE
 // =================================================================
-
-/**
- * Assegna i ruoli di squadra ai membri e aggiorna i permessi del canale.
- * @param {string} channelId - L'ID del canale appena creato.
- * @param {Array<{discord_id: string, team_name: string}>} roster - La lista dei giocatori e delle loro squadre.
- */
 export async function setupChannelAndRoles(channelId, roster) {
     const roleIds = {
         'Rossa': DISCORD_RED_ROLE_ID,
@@ -79,7 +65,7 @@ export async function setupChannelAndRoles(channelId, roster) {
         'Nera': DISCORD_BLACK_ROLE_ID,
     };
 
-    // 1. Assegna i Ruoli Colorati
+    // 1. Assegna i Ruoli Colorati (DELETE/PUT di ruolo)
     const roleAssignmentPromises = roster.map(player => {
         const roleIdToAssign = roleIds[player.team_name];
         if (!roleIdToAssign) return Promise.resolve();
@@ -93,10 +79,9 @@ export async function setupChannelAndRoles(channelId, roster) {
     });
 
     await Promise.allSettled(roleAssignmentPromises);
-    console.log(`Tentativo di assegnazione ruoli completato per ${roster.length} giocatori.`);
+    
 
-
-    // 2. Sblocca il Canale per i 4 Ruoli Squadra
+    // 2. Sblocca il Canale per i 4 Ruoli Squadra (Permessi)
     const rolesToUnlock = Object.values(roleIds);
     const unlockPromises = rolesToUnlock.map(roleId => {
         const endpoint = `${DISCORD_API}/channels/${channelId}/permissions/${roleId}`;
@@ -115,5 +100,38 @@ export async function setupChannelAndRoles(channelId, roster) {
     });
 
     await Promise.allSettled(unlockPromises);
-    console.log(`Canale ${channelId} sbloccato per i ruoli squadra.`);
+}
+
+
+// =================================================================
+// FUNZIONE 3: RIMOZIONE RUOLI E CANALE
+// =================================================================
+export async function cleanupMatch(channelId, discordUserIds) {
+    const roleIdsToRemove = [
+        DISCORD_RED_ROLE_ID,
+        DISCORD_BLUE_ROLE_ID,
+        DISCORD_YELLOW_ROLE_ID,
+        DISCORD_BLACK_ROLE_ID,
+    ];
+
+    // 1. Rimuovi tutti i 4 ruoli di squadra da ogni utente
+    const removalPromises = discordUserIds.flatMap(userId => 
+        roleIdsToRemove.map(roleId => {
+            const endpoint = `${DISCORD_API}/guilds/${DISCORD_GUILD_ID}/members/${userId}/roles/${roleId}`;
+
+            return fetch(endpoint, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` },
+            });
+        })
+    );
+
+    await Promise.allSettled(removalPromises);
+
+    // 2. Elimina il Canale di Testo
+    const deleteEndpoint = `${DISCORD_API}/channels/${channelId}`;
+    await fetch(deleteEndpoint, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` },
+    });
 }

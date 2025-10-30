@@ -11,22 +11,15 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
 
 const TEAM_NAMES = ['Rossa', 'Blu', 'Gialla', 'Nera'];
 
-/**
- * Funzione di utilità per dividere i giocatori in 4 squadre (casuale semplice)
- */
 function assignTeams(players) {
     players.sort(() => Math.random() - 0.5); // Mescola
     
-    // Assegna a rotazione
     return players.map((player, index) => ({
         ...player,
         team_name: TEAM_NAMES[index % TEAM_NAMES.length],
     }));
 }
 
-/**
- * Endpoint POST: Avvia la configurazione della partita e del canale Discord
- */
 export async function POST({ request }) {
     try {
         const { eventId, matchOwnerId } = await request.json(); 
@@ -36,17 +29,16 @@ export async function POST({ request }) {
         }
         
         // ===================================================================
-        // PASSO 1: Ottieni i giocatori Convocati e i loro Discord ID (QUERY CORRETTA)
+        // PASSO 1: Ottieni i giocatori Convocati e i loro Discord ID
         // ===================================================================
-        
         const { data: participationData, error: participationError } = await supabaseAdmin
-            .from('partecipazioni') // <--- NOME TABELLA DI COLLEGAMENTO
+            .from('partecipazioni') 
             .select(`
                 utente_id, 
                 profili_utenti:utente_id (discord_id) 
             `) 
             .eq('evento_id', eventId)
-            .eq('stato', 'confermato'); // Assumiamo che solo i 'confermati' giochino
+            .eq('stato', 'confermato'); 
 
         if (participationError) {
             console.error('Errore query Supabase:', participationError);
@@ -67,27 +59,57 @@ export async function POST({ request }) {
         // ===================================================================
         // PASSO 2: Divisione Squadre e Preparazione Roster
         // ===================================================================
-        
         const finalRoster = assignTeams(players); 
         
-        // OPZIONALE: Qui dovresti anche salvare il roster finale (finalRoster)
-        // nelle tabelle 'event_tournaments' e 'tournament_rosters' se non è già stato fatto.
+        // ===================================================================
+        // PASSO 3: SALVATAGGIO STATO E ROSTER IN SUPABASE e CREAZIONE CANALE
+        // ===================================================================
         
-        // ===================================================================
-        // PASSO 3: Interazione con Discord
-        // ===================================================================
-
         const eventDate = new Date().toISOString().slice(0, 10);
         const channelSlug = `partita-${eventDate}-${eventId.slice(0, 4)}`; 
         const channelId = await createTemporaryChannel(channelSlug, matchOwnerId);
+        const discordChannelUrl = `https://discord.com/channels/${DISCORD_GUILD_ID}/${channelId}`;
         
+        // 3a. Inserisci lo stato della partita e il canale Discord
+        const { error: eventError } = await supabaseAdmin
+            .from('event_tournaments')
+            .insert({
+                event_id: eventId,
+                discord_channel_id: channelId,
+                discord_channel_url: discordChannelUrl,
+                is_active: true
+            });
+            
+        if (eventError) {
+            console.error('Errore Supabase (event_tournaments):', eventError);
+            throw new Error('Impossibile salvare lo stato del torneo.');
+        }
+
+        // 3b. Inserisci il roster finale
+        const rosterData = finalRoster.map(p => ({
+            event_id: eventId,
+            user_id: p.user_id,
+            team_name: p.team_name,
+        }));
+        
+        const { error: rosterError } = await supabaseAdmin
+            .from('tournament_rosters')
+            .insert(rosterData);
+
+        if (rosterError) {
+            console.error('Errore Supabase (tournament_rosters):', rosterError);
+            throw new Error('Impossibile salvare il roster finale.');
+        }
+        
+        // ===================================================================
+        // PASSO 4: Interazione con Discord
+        // ===================================================================
+
         await setupChannelAndRoles(channelId, finalRoster);
         
         // ===================================================================
-        // PASSO 4: Risposta finale
+        // PASSO 5: Risposta finale
         // ===================================================================
-
-        const discordChannelUrl = `https://discord.com/channels/${DISCORD_GUILD_ID}/${channelId}`;
 
         return new Response(JSON.stringify({ 
             message: 'Partita configurata con successo e Bot Discord attivato!',

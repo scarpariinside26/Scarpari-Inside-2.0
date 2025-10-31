@@ -1,18 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { createTemporaryChannel, setupChannelAndRoles } from '$lib/server/discord-api';
-// Rimosse le importazioni da $env
 
-// Variabili d'Ambiente: Lettura diretta da process.env
+// Rimosse le importazioni da $env, ora si usa process.env
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID;
-
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-    auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-    },
-});
 
 const TEAM_NAMES = ['Rossa', 'Blu', 'Gialla', 'Nera'];
 
@@ -26,6 +18,14 @@ function assignTeams(players) {
 }
 
 export async function POST({ request }) {
+    // 💥 CORREZIONE CHIAVE: Inizializza Supabase all'interno della funzione
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+        },
+    });
+
     try {
         const { eventId, matchOwnerId } = await request.json(); 
 

@@ -13,7 +13,7 @@
     // Stato di test
     const eventId = $page.params.eventId;
     const isMatchActive = true; 
-    const isMatchOwner = true; // Simula l'admin per mostrare i pulsanti di calcolo
+    const isMatchOwner = true; // Simula l'admin
     
     // Variabile per gestire la transizione iniziale
     let isMounted = false;
@@ -24,14 +24,13 @@
 </svelte:head>
 
 <div class="page-transition" class:mounted={isMounted} on:mount={() => isMounted = true}>
-<MatchVoting 
+    <MatchVoting 
         {eventId}
         roster={MOCK_ROSTER}
         {isMatchActive}
         {isMatchOwner}
-        hasUserVoted={false}
+        hasUserVoted={false} 
     />
-    
 </div>
 
 <style>

@@ -1,141 +1,97 @@
 import * as env from '$env/dynamic/private';
 
-// =================================================================
-// Variabili d'Ambiente con Fallback (Risolve l'errore di build)
-// =================================================================
-const DISCORD_BOT_TOKEN = env.DISCORD_BOT_TOKEN ?? 'MISSING_TOKEN';
-const DISCORD_GUILD_ID = env.DISCORD_GUILD_ID ?? '0'; 
-const DISCORD_CATEGORY_ID = env.DISCORD_CATEGORY_ID ?? '0';
-const DISCORD_RED_ROLE_ID = env.DISCORD_RED_ROLE_ID ?? '0';
-const DISCORD_BLUE_ROLE_ID = env.DISCORD_BLUE_ROLE_ID ?? '0';
-const DISCORD_YELLOW_ROLE_ID = env.DISCORD_YELLOW_ROLE_ID ?? '0';
-const DISCORD_BLACK_ROLE_ID = env.DISCORD_BLACK_ROLE_ID ?? '0';
+// Variabili d'Ambiente: Non usare '??' qui per evitare l'errore di build
+const DISCORD_BOT_TOKEN = env.DISCORD_BOT_TOKEN;
+const DISCORD_GUILD_ID = env.DISCORD_GUILD_ID; 
+const DISCORD_CATEGORY_ID = env.DISCORD_CATEGORY_ID;
+const DISCORD_RED_ROLE_ID = env.DISCORD_RED_ROLE_ID;
+const DISCORD_BLUE_ROLE_ID = env.DISCORD_BLUE_ROLE_ID;
+const DISCORD_YELLOW_ROLE_ID = env.DISCORD_YELLOW_ROLE_ID;
+const DISCORD_BLACK_ROLE_ID = env.DISCORD_BLACK_ROLE_ID;
 
 
-const DISCORD_API = 'https://discord.com/api/v10';
+const DISCORD_API = 'https://discord.com/api/v10'; 
 
-// =================================================================
-// FUNZIONE 1: CREAZIONE CANALE
-// =================================================================
-export async function createTemporaryChannel(matchSlug, matchOwnerId) {
-    const channelName = matchSlug.toLowerCase().replace(/[^a-z0-9-]/g, '-');
-    const endpoint = `${DISCORD_API}/guilds/${DISCORD_GUILD_ID}/channels`;
-
-    const initialPerms = [
-        {
-            id: DISCORD_GUILD_ID,
-            type: 0, // Tipo: Role (@everyone)
-            deny: (1 << 10) | (1 << 2), // VIEW_CHANNEL | SEND_MESSAGES
-            allow: 0,
+// Funzione generica per le richieste API di Discord
+async function discordApiRequest(endpoint, options) {
+    if (!DISCORD_BOT_TOKEN || !DISCORD_GUILD_ID || !DISCORD_CATEGORY_ID) {
+        console.error('Missing Discord environment variables.');
+        return { success: false, status: 500, error: 'Configuration error: Discord variables missing' };
+    }
+    
+    const url = `${DISCORD_API}${endpoint}`;
+    
+    const response = await fetch(url, {
+        headers: {
+            'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
+            'Content-Type': 'application/json',
         },
-        {
-            id: matchOwnerId,
-            type: 1, // Tipo: Member (Admin che deve vedere il canale subito)
-            allow: (1 << 10), // VIEW_CHANNEL
-            deny: 0,
-        }
-    ];
+        ...options
+    });
+    
+    if (response.ok) {
+        return { success: true, status: response.status, data: await response.json() };
+    } else {
+        const errorText = await response.text();
+        console.error(`Discord API Request Failed for ${endpoint}: ${response.status} - ${errorText}`);
+        return { success: false, status: response.status, error: errorText };
+    }
+}
 
-    const response = await fetch(endpoint, {
+// Funzioni specifiche per Discord
+export async function createMatchChannel(channelName) {
+    const endpoint = `/guilds/${DISCORD_GUILD_ID}/channels`;
+    return discordApiRequest(endpoint, {
         method: 'POST',
-        headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
             name: channelName,
-            type: 0, // Canale di Testo
-            parent_id: DISCORD_CATEGORY_ID, 
-            permission_overwrites: initialPerms,
+            type: 0, // Text channel
+            parent_id: DISCORD_CATEGORY_ID,
         }),
     });
+}
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        console.error('ERRORE DISCORD API (Creazione Canale):', errorData);
-        throw new Error(`Impossibile creare il canale Discord: ${response.status}`);
+export async function deleteMatchChannel(channelId) {
+    const endpoint = `/channels/${channelId}`;
+    return discordApiRequest(endpoint, {
+        method: 'DELETE',
+    });
+}
+
+export async function assignRoles(userId, red, blue, yellow, black) {
+    const rolesToAssign = [];
+    if (red) rolesToAssign.push(DISCORD_RED_ROLE_ID);
+    if (blue) rolesToAssign.push(DISCORD_BLUE_ROLE_ID);
+    if (yellow) rolesToAssign.push(DISCORD_YELLOW_ROLE_ID);
+    if (black) rolesToAssign.push(DISCORD_BLACK_ROLE_ID);
+
+    for (const roleId of rolesToAssign) {
+        const endpoint = `/guilds/${DISCORD_GUILD_ID}/members/${userId}/roles/${roleId}`;
+        const response = await discordApiRequest(endpoint, {
+            method: 'PUT',
+        });
+        if (!response.success) {
+            console.error(`Failed to assign role ${roleId} to user ${userId}`);
+        }
     }
-
-    const data = await response.json();
-    return data.id; 
 }
 
-
-// =================================================================
-// FUNZIONE 2: ASSEGNAZIONE RUOLI E SBLOCCO CANALE
-// =================================================================
-export async function setupChannelAndRoles(channelId, roster) {
-    const roleIds = {
-        'Rossa': DISCORD_RED_ROLE_ID,
-        'Blu': DISCORD_BLUE_ROLE_ID,
-        'Gialla': DISCORD_YELLOW_ROLE_ID,
-        'Nera': DISCORD_BLACK_ROLE_ID,
-    };
-
-    // 1. Assegna i Ruoli Colorati (DELETE/PUT di ruolo)
-    const roleAssignmentPromises = roster.map(player => {
-        const roleIdToAssign = roleIds[player.team_name];
-        if (!roleIdToAssign) return Promise.resolve();
-        
-        const endpoint = `${DISCORD_API}/guilds/${DISCORD_GUILD_ID}/members/${player.discord_id}/roles/${roleIdToAssign}`;
-
-        return fetch(endpoint, {
-            method: 'PUT',
-            headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` },
-        });
-    });
-
-    await Promise.allSettled(roleAssignmentPromises);
-    
-
-    // 2. Sblocca il Canale per i 4 Ruoli Squadra (Permessi)
-    const rolesToUnlock = Object.values(roleIds);
-    const unlockPromises = rolesToUnlock.map(roleId => {
-        const endpoint = `${DISCORD_API}/channels/${channelId}/permissions/${roleId}`;
-        const allowPermissions = (1 << 10) | (1 << 2); // VIEW_CHANNEL | SEND_MESSAGES
-
-        return fetch(endpoint, {
-            method: 'PUT',
-            headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                id: roleId,
-                type: 0, // Tipo: Role
-                allow: allowPermissions,
-                deny: 0,
-            }),
-        });
-    });
-
-    await Promise.allSettled(unlockPromises);
-}
-
-
-// =================================================================
-// FUNZIONE 3: RIMOZIONE RUOLI E CANALE
-// =================================================================
-export async function cleanupMatch(channelId, discordUserIds) {
-    const roleIdsToRemove = [
+export async function unassignRoles(userId) {
+    const rolesToRemove = [
         DISCORD_RED_ROLE_ID,
         DISCORD_BLUE_ROLE_ID,
         DISCORD_YELLOW_ROLE_ID,
-        DISCORD_BLACK_ROLE_ID,
+        DISCORD_BLACK_ROLE_ID
     ];
 
-    // 1. Rimuovi tutti i 4 ruoli di squadra da ogni utente
-    const removalPromises = discordUserIds.flatMap(userId => 
-        roleIdsToRemove.map(roleId => {
-            const endpoint = `${DISCORD_API}/guilds/${DISCORD_GUILD_ID}/members/${userId}/roles/${roleId}`;
-
-            return fetch(endpoint, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` },
-            });
-        })
-    );
-
-    await Promise.allSettled(removalPromises);
-
-    // 2. Elimina il Canale di Testo
-    const deleteEndpoint = `${DISCORD_API}/channels/${channelId}`;
-    await fetch(deleteEndpoint, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` },
-    });
+    for (const roleId of rolesToRemove) {
+        const endpoint = `/guilds/${DISCORD_GUILD_ID}/members/${userId}/roles/${roleId}`;
+        const response = await discordApiRequest(endpoint, {
+            method: 'DELETE',
+        });
+        if (!response.success) {
+            // Questo errore è atteso se l'utente non aveva il ruolo, quindi lo logghiamo solo a livello di debug
+            // console.debug(`Failed to remove role ${roleId} from user ${userId} (role not present?)`);
+        }
+    }
 }

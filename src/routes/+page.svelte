@@ -3,7 +3,8 @@
     export let data; // Dati caricati da +page.server.js
     
     const BOT_VERCEL_URL = 'https://YOUR-BOT-VERCEL-DOMAIN.vercel.app'; // ⚠️ SOSTITUISCI!
-
+    const SUCCESS_COLOR = 'var(--success-color)';
+    const DEFAULT_COLOR = '#ccc'; // Usa un colore fisso o un'altra variabile CSS
     let processingEventId = null;
 
     async function handleMatchAction(eventId, action, channelId = null) {

@@ -1,6 +1,11 @@
-import { SUPABASE_URL, SUPABASE_SERVICE_KEY, DISCORD_GUILD_ID } from '$env/dynamic/private';
+import * as env from '$env/dynamic/private';
 import { createClient } from '@supabase/supabase-js';
 import { createTemporaryChannel, setupChannelAndRoles } from '$lib/server/discord-api';
+
+// Variabili d'ambiente con fallback per la build
+const SUPABASE_URL = env.SUPABASE_URL ?? 'url_placeholder';
+const SUPABASE_SERVICE_KEY = env.SUPABASE_SERVICE_KEY ?? 'key_placeholder';
+const DISCORD_GUILD_ID = env.DISCORD_GUILD_ID ?? '0';
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
     auth: {
@@ -14,6 +19,7 @@ const TEAM_NAMES = ['Rossa', 'Blu', 'Gialla', 'Nera'];
 function assignTeams(players) {
     players.sort(() => Math.random() - 0.5); // Mescola
     
+    // Assegna le squadre in modo ciclico
     return players.map((player, index) => ({
         ...player,
         team_name: TEAM_NAMES[index % TEAM_NAMES.length],
@@ -82,6 +88,8 @@ export async function POST({ request }) {
             
         if (eventError) {
             console.error('Errore Supabase (event_tournaments):', eventError);
+            // Assicurarsi di chiamare la cleanup se c'è un errore qui, 
+            // ma per ora solleviamo l'errore per fallire il setup.
             throw new Error('Impossibile salvare lo stato del torneo.');
         }
 

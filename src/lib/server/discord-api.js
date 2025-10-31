@@ -1,12 +1,16 @@
-import { 
-    DISCORD_BOT_TOKEN, 
-    DISCORD_GUILD_ID, 
-    DISCORD_CATEGORY_ID,
-    DISCORD_RED_ROLE_ID,
-    DISCORD_BLUE_ROLE_ID,
-    DISCORD_YELLOW_ROLE_ID,
-    DISCORD_BLACK_ROLE_ID 
-} from '$env/dynamic/private'; // Usa dynamic per risolvere gli errori di build
+import * as env from '$env/dynamic/private';
+
+// =================================================================
+// Variabili d'Ambiente con Fallback (Risolve l'errore di build)
+// =================================================================
+const DISCORD_BOT_TOKEN = env.DISCORD_BOT_TOKEN ?? 'MISSING_TOKEN';
+const DISCORD_GUILD_ID = env.DISCORD_GUILD_ID ?? '0'; 
+const DISCORD_CATEGORY_ID = env.DISCORD_CATEGORY_ID ?? '0';
+const DISCORD_RED_ROLE_ID = env.DISCORD_RED_ROLE_ID ?? '0';
+const DISCORD_BLUE_ROLE_ID = env.DISCORD_BLUE_ROLE_ID ?? '0';
+const DISCORD_YELLOW_ROLE_ID = env.DISCORD_YELLOW_ROLE_ID ?? '0';
+const DISCORD_BLACK_ROLE_ID = env.DISCORD_BLACK_ROLE_ID ?? '0';
+
 
 const DISCORD_API = 'https://discord.com/api/v10';
 

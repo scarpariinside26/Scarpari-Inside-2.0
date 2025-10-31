@@ -24,13 +24,14 @@
 </svelte:head>
 
 <div class="page-transition" class:mounted={isMounted} on:mount={() => isMounted = true}>
-    <MatchVoting 
+<MatchVoting 
         {eventId}
         roster={MOCK_ROSTER}
         {isMatchActive}
         {isMatchOwner}
-        hasUserVoted={false} // Lasciamo false per testare il voto
+        hasUserVoted={false}
     />
+    
 </div>
 
 <style>

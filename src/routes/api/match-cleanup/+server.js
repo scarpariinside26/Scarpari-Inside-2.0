@@ -1,19 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 import { cleanupMatch } from '$lib/server/discord-api';
-// Rimosse le importazioni da $env
 
-// Variabili d'Ambiente: Lettura diretta da process.env
+// Rimosse le importazioni da $env, ora si usa process.env
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-    auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-    },
-});
-
 export async function POST({ request }) {
+    // 💥 CORREZIONE CHIAVE: Inizializza Supabase all'interno della funzione
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+        },
+    });
+    
     try {
         const { channelId, eventId } = await request.json(); 
 

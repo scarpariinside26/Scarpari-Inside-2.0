@@ -13,13 +13,13 @@
     
     // Filtra la lista dei pagamenti
     $: filteredPayments = mockPayments.filter(p => {
-        // 🚀 CORREZIONE: Applichiamo toLowerCase() anche al metodo del pagamento (p.method)
+        // 🚀 CORREZIONE: Applichiamo toLowerCase() al metodo del pagamento (p.method)
         const methodMatch = filterMethod === 'all' || p.method.toLowerCase() === filterMethod;
         const statusMatch = filterStatus === 'all' || (filterStatus === 'paid' ? p.paid : !p.paid);
         return methodMatch && statusMatch;
     });
 
-    // Toggle per lo stato di pagamento, ritardo e cartellino giallo
+    // ... (restanti funzioni come prima) ...
     function togglePayment(paymentId) {
         mockPayments = mockPayments.map(p => 
             p.id === paymentId ? { ...p, paid: !p.paid } : p
@@ -42,7 +42,7 @@
 </script>
 
 <style>
-    /* ... (Stili CSS mantenuti) ... */
+    /* ... (Stili CSS come prima) ... */
     .controls-bar {
         display: flex;
         flex-wrap: wrap;

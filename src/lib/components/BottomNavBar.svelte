@@ -62,13 +62,11 @@
     function openCreateEventFlow(type) {
         showActionMenu = false;
         alert(`Avvia la procedura per 'Creare un nuovo Evento ${type}'.`);
-        // Qui potresti reindirizzare a /events/create?type=sportivo
     }
 
     function openEditEventFlow() {
         closeModal();
         alert(`Avvia la modifica per l'evento: ${$eventStore.eventData?.title}`);
-        // Qui potresti reindirizzare a /events/edit/{id}
     }
 
     // --- LOGICA MODALE EVENTI FINE ---
@@ -148,7 +146,7 @@
         transform: scale(1.05);
     }
     .center-button.menu-active {
-        transform: rotate(45deg); /* Effetto rotazione per il '+' */
+        transform: rotate(45deg); 
         background: var(--warning-color);
     }
 
@@ -194,7 +192,7 @@
 
 
     /* ------------------------------------- */
-    /* Stili Modale Eventi (Dettagli + Discord) */
+    /* Stili Modale Eventi */
     /* ------------------------------------- */
     .modal-backdrop {
         position: fixed;
@@ -235,26 +233,11 @@
         align-items: center;
         border-bottom: 1px solid var(--panel-bg);
         padding-bottom: 10px;
-        margin-bottom: 10px; /* Ridotto per far spazio al link Discord */
+        margin-bottom: 20px;
     }
     .modal-header h3 {
         margin: 0;
         color: var(--accent-color);
-    }
-    .discord-link {
-        display: block;
-        padding: 10px;
-        margin-bottom: 20px;
-        background: #7289da; /* Colore Discord */
-        color: white;
-        text-decoration: none;
-        border-radius: 8px;
-        font-weight: 700;
-        text-align: center;
-        transition: background 0.2s;
-    }
-    .discord-link:hover {
-        background: #677bc4;
     }
 
     /* Stili Lista (List View) */
@@ -344,18 +327,10 @@
             <div class="modal-header">
                 <h3>{$eventStore.eventData?.title || 'Dettagli Evento'}</h3>
                 
-                <div style="display: flex; gap: 8px;">
-                    <button on:click={openEditEventFlow} title="Modifica Evento" style="background: none; border: none; font-size: 1.2rem; color: var(--accent-color);">
-                        🖊️ Modifica
-                    </button>
-                </div>
+                <button on:click={openEditEventFlow} title="Modifica Evento" style="background: none; border: none; font-size: 1.2rem; color: var(--accent-color);">
+                    🖊️ Modifica
+                </button>
             </div>
-
-            {#if $eventStore.eventData?.discordLink}
-                <a href={$eventStore.eventData?.discordLink} target="_blank" class="discord-link">
-                    📣 Chat Discord Partita
-                </a>
-            {/if}
             
             <div style="text-align: center; margin-bottom: 20px;">
                 <p style="font-weight: 600;">Lista Giocatori</p>

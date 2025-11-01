@@ -2,7 +2,7 @@
     import TopNavBar from '$lib/components/TopNavBar.svelte';
     import BottomNavBar from '$lib/components/BottomNavBar.svelte';
     import { fly } from 'svelte/transition';
-    import { eventStore } from '$lib/stores/eventStore.js'; // Importa lo store fittizio
+    import { eventStore } from '$lib/stores/eventStore.js'; 
     
     // Logica per l'evento live
     const liveEvent = { 
@@ -11,7 +11,9 @@
         date: 'Sabato 2 Nov, 20:00', 
         confirmed: 10, 
         total: 10, 
-        location: 'Campo A' 
+        location: 'Campo A',
+        // Aggiungiamo un link Discord fittizio
+        discordLink: 'https://discord.gg/partita-live-scarpari' 
     };
 
     /**
@@ -54,23 +56,20 @@
         color: var(--secondary-accent);
     }
 
-    /* Stile Card Evento Live - Ora funge da promemoria, non più l'attivatore */
+    /* Stile Card Evento Live - Di nuovo cliccabile */
     .event-live-card {
         grid-column: 1 / -1; 
         border-left: 5px solid var(--accent-color);
-        cursor: default; /* Rimosso il cursore pointer */
+        cursor: pointer; /* Riattiviamo il cursore pointer */
         transition: transform 0.2s;
         text-align: left;
-        /* Suggerimento per l'utente: indicare dove si trova il controllo */
-        position: relative;
     }
+    .event-live-card:hover {
+        transform: translateY(-2px);
+    }
+    /* Rimuoviamo il messaggio di suggerimento "Gestisci dal basso" */
     .event-live-card::after {
-        content: "Gestisci l'evento dal tasto centrale in basso";
-        display: block;
-        font-size: 0.75rem;
-        color: var(--warning-color);
-        margin-top: 10px;
-        font-weight: 600;
+        content: none; 
     }
 
     .confirmation-status {
@@ -92,11 +91,14 @@
 
     <div class="dashboard-grid">
 
-        <div class="card event-live-card">
+        <button 
+            class="card event-live-card" 
+            on:click={openEventModal}
+        >
             <div class="card-title">Prossimo Evento Live</div>
             <p class="card-text">{liveEvent.title} • {liveEvent.location}</p>
             <span class="confirmation-status">{liveEvent.confirmed} / {liveEvent.total} Giocatori Confermati!</span>
-        </div>
+        </button>
 
         <div class="card">
             <div class="card-title">Ultima Presenza</div>

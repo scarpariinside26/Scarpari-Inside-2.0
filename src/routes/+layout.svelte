@@ -1,39 +1,19 @@
 <script>
-    // Importa il CSS globale
-    import '../app.css'; 
+    // Importa i CSS globali, se presenti
+    import '$lib/styles/app.css'; 
     
-    // 🚀 CORREZIONE: Usa l'alias $lib per importare la Sidebar
-    import Sidebar from '$lib/Sidebar.svelte'; 
+    // Non importare qui la vecchia NavBar laterale
 </script>
 
 <style>
-    /* Stili Globali Necessari */
+    /* Stili CSS globali se non sono in app.css */
+    /* Assicurati che il body sia a larghezza intera e non abbia margini */
     :global(body) {
-        background-color: var(--bg-color); 
-        color: var(--text-color);
         margin: 0;
+        padding: 0;
         min-height: 100vh;
-    }
-    
-    /* Area del Contenuto Principale */
-    .content {
-        margin-left: 250px; /* Spazio per la sidebar fissa su desktop */
-        padding: 20px;
-        min-height: 100vh;
-        transition: margin-left 0.3s;
-    }
-    
-    /* Responsive Mobile: Il contenuto occupa tutto lo spazio */
-    @media (max-width: 768px) {
-        .content {
-            margin-left: 0; 
-            padding-top: 60px; /* Spazio per il pulsante del menu mobile */
-        }
+        background: #0f172a; /* Mantiene lo sfondo scuro globale */
     }
 </style>
 
-<Sidebar />
-
-<div class="content">
-    <slot />
-</div>
+<slot />

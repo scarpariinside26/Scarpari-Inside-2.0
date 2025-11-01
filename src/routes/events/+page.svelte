@@ -1,21 +1,83 @@
 <script>
-    import { fly } from 'svelte/transition';
-    // Dati simulati per gli eventi (come da tua richiesta)
+    import { fly, fade } from 'svelte/transition'; // Importa anche 'fade'
+    
     const mockEvents = [
+        // ... (Mantieni i tuoi dati simulati) ...
         { id: 1, name: 'Torneo Settimanale 1', date: '2025-11-05', time: '20:00', location: 'Discord', duration: '2h', participants: 16, status: 'Active' },
         { id: 2, name: 'Mega Evento Finale', date: '2025-11-20', time: '18:30', location: 'Twitch', duration: '4h', participants: 32, status: 'Pending' },
     ];
+    
     let isModalOpen = false;
+    // Nuove variabili per il Form
+    let newEvent = {
+        name: '', date: '', time: '', location: '', duration: 120, participants: 16
+    };
+
+    function addEvent() {
+        if (!newEvent.name || !newEvent.date || !newEvent.time) {
+            alert('Per favore, compila tutti i campi obbligatori.');
+            return;
+        }
+        
+        // Simulazione: Aggiunge il nuovo evento ai dati simulati
+        const newId = Math.max(...mockEvents.map(e => e.id)) + 1;
+        mockEvents = [...mockEvents, {
+            id: newId, 
+            name: newEvent.name, 
+            date: newEvent.date, 
+            time: newEvent.time, 
+            location: newEvent.location || 'N/A', 
+            duration: `${newEvent.duration / 60}h`, 
+            participants: newEvent.participants, 
+            status: 'Pending'
+        }];
+        
+        // Reset e chiusura
+        newEvent = { name: '', date: '', time: '', location: '', duration: 120, participants: 16 };
+        isModalOpen = false;
+    }
 </script>
 
 <style>
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .table-responsive { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #4a4a75; font-size: 0.9em; }
-    th { background-color: #33334d; color: var(--accent-color-glow); }
-    tr:hover { background-color: #33334d70; }
-    .btn-action { margin-right: 5px; padding: 8px 12px; font-size: 0.8em; }
+    /* ... (Mantieni i tuoi stili esistenti per table-responsive, table, th, td, ecc.) ... */
+    
+    /* Stili per il Modale (CRUCIALE PER LA VISUALIZZAZIONE) */
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+    }
+    .modal-content {
+        max-width: 600px;
+        width: 90%;
+        padding: 30px;
+        /* Usa la transizione fly per l'ingresso del modale */
+    }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; color: var(--accent-color-glow); margin-bottom: 5px; font-weight: bold; }
+    input[type="text"], input[type="date"], input[type="time"], input[type="number"] {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #4a4a75;
+        background-color: #333650;
+        color: var(--text-color);
+        border-radius: 4px;
+        box-sizing: border-box; /* Importante per i layout reattivi */
+    }
+    .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    
+    @media (max-width: 600px) {
+        .modal-content {
+            margin: 20px;
+        }
+    }
 </style>
 
 <div class="header">
@@ -25,17 +87,6 @@
 
 <div class="panel table-responsive" transition:fly={{ y: 50, duration: 500 }}>
     <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Nome Evento</th>
-                <th>Data/Ora</th>
-                <th>Luogo</th>
-                <th>Partecipanti</th>
-                <th>Stato</th>
-                <th>Azioni</th>
-            </tr>
-        </thead>
         <tbody>
             {#each mockEvents as event}
                 <tr>
@@ -56,11 +107,41 @@
 </div>
 
 {#if isModalOpen}
-    <div class="modal">
-        <div class="modal-content panel">
-            <h3>Crea/Modifica Evento</h3>
-            <p>Qui andrebbe il form con i campi: Data, Ora, Luogo, Durata, Partecipanti (come tabelle Supabase).</p>
-            <button class="btn-danger" on:click={() => isModalOpen = false}>Chiudi</button>
+    <div class="modal-backdrop" transition:fade={{ duration: 300 }} on:click={() => isModalOpen = false}>
+        <div class="modal-content panel" transition:fly={{ y: 100, duration: 400 }} on:click|stopPropagation>
+            <h3>Crea Nuovo Evento</h3>
+            
+            <form on:submit|preventDefault={addEvent}>
+                <div class="form-group">
+                    <label for="name">Nome Evento</label>
+                    <input type="text" id="name" bind:value={newEvent.name} required />
+                </div>
+                <div class="form-group">
+                    <label for="date">Data</label>
+                    <input type="date" id="date" bind:value={newEvent.date} required />
+                </div>
+                <div class="form-group">
+                    <label for="time">Orario</label>
+                    <input type="time" id="time" bind:value={newEvent.time} required />
+                </div>
+                <div class="form-group">
+                    <label for="location">Luogo (es. Discord Channel, Twitch)</label>
+                    <input type="text" id="location" bind:value={newEvent.location} />
+                </div>
+                <div class="form-group">
+                    <label for="duration">Durata Stimata (minuti)</label>
+                    <input type="number" id="duration" bind:value={newEvent.duration} min="30" max="360" />
+                </div>
+                <div class="form-group">
+                    <label for="participants">Numero Max Partecipanti</label>
+                    <input type="number" id="participants" bind:value={newEvent.participants} min="2" max="64" />
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn-danger" on:click={() => isModalOpen = false}>Annulla</button>
+                    <button type="submit" class="btn-success">Crea Evento</button>
+                </div>
+            </form>
         </div>
     </div>
 {/if}

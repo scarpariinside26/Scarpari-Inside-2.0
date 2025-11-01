@@ -12,7 +12,8 @@
 
     // --- LOGICA MODALE EVENTI INIZIO ---
 
-    let viewMode = 'list'; // Manteniamo solo 'list'
+    let viewMode = 'list'; 
+    let showActionMenu = false; // Nuovo stato per il menu di azione centrale
 
     // Dati simulati dei giocatori e delle squadre
     const detailedEventData = {
@@ -53,6 +54,23 @@
             closeModal();
         }
     }
+    
+    // --- NUOVE FUNZIONI PER MENU AZIONE ---
+    function toggleActionMenu() {
+        showActionMenu = !showActionMenu;
+    }
+
+    function openLiveEventModal() {
+        showActionMenu = false;
+        eventStore.openModal({ title: 'Partita Settimanale', date: 'Sabato 2 Nov', confirmed: 10, total: 10, location: 'Campo A' });
+    }
+
+    function openCreateEventFlow() {
+        showActionMenu = false;
+        // Placeholder: qui andrà la logica per aprire la modale/pagina di creazione
+        alert("Avvia la procedura per 'Creare un nuovo Evento'.");
+    }
+
     // --- LOGICA MODALE EVENTI FINE ---
 </script>
 
@@ -121,7 +139,7 @@
         justify-content: center;
         font-size: 2rem;
         font-weight: 900;
-        border: 4px solid var(--bg-color); /* Bordo per separarlo dalla nav bar */
+        border: 4px solid var(--bg-color); 
         cursor: pointer;
         transition: background 0.2s, transform 0.2s;
     }
@@ -131,7 +149,48 @@
     }
 
     /* ------------------------------------- */
-    /* Stili Modale Eventi (dal vecchio file) */
+    /* Stili Menu Azione Centrale */
+    /* ------------------------------------- */
+    .action-menu-overlay {
+        position: fixed;
+        bottom: 70px; /* Sopra la nav bar */
+        left: 0;
+        width: 100%;
+        height: calc(100% - 70px);
+        z-index: 499; /* Sotto il menu ma sopra il resto del contenuto */
+    }
+    .action-menu {
+        position: fixed;
+        bottom: 85px; /* Sopra la nav bar e il bottone centrale */
+        left: 50%;
+        transform: translateX(-50%);
+        width: 200px;
+        background: var(--panel-bg);
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 501;
+    }
+    .action-menu button {
+        background: var(--bg-color);
+        color: var(--text-color);
+        padding: 10px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .action-menu button:hover {
+        background: var(--input-bg);
+    }
+
+
+    /* ------------------------------------- */
+    /* Stili Modale Eventi */
     /* ------------------------------------- */
     .modal-backdrop {
         position: fixed;
@@ -154,7 +213,7 @@
         overflow-y: auto;
         padding: 20px;
         position: relative;
-        z-index: 1001; /* Assicura che sia sopra il backdrop */
+        z-index: 1001; 
     }
     .close-button {
         position: absolute;
@@ -209,29 +268,37 @@
 
 </style>
 
+{#if showActionMenu}
+    <div class="action-menu-overlay" transition:fade={{ duration: 150 }} on:click={() => showActionMenu = false}></div>
+    <div class="action-menu" transition:fly={{ y: 20, duration: 200, easing: quartOut }}>
+        <button on:click={openCreateEventFlow}>Crea Nuovo Evento</button>
+        <button on:click={openLiveEventModal}>Gestisci Partita Live</button>
+    </div>
+{/if}
+
 <div class="bottom-nav-bar">
     <a href="/" class="nav-item" class:active={$page.url.pathname === '/'}>
-        <span class="nav-icon">🏠</span> Home
+        <span class="nav-icon">📊</span> Dashboard
     </a>
-    <a href="/players" class="nav-item" class:active={$page.url.pathname.startsWith('/players')}>
-        <span class="nav-icon">👤</span> Giocatori
+    <a href="/stats" class="nav-item" class:active={$page.url.pathname.startsWith('/stats')}>
+        <span class="nav-icon">🏆</span> Statistiche
     </a>
     
     <div class="center-button-container">
         <button 
             class="center-button" 
-            on:click={() => eventStore.openModal({ title: 'Partita Settimanale', date: 'Sabato 2 Nov', confirmed: 10, total: 10, location: 'Campo A' })}
-            aria-label="Gestisci Evento Live"
+            on:click={toggleActionMenu}
+            aria-label="Opzioni Eventi"
         >
-            ⚽
+            +
         </button>
     </div>
     
-    <a href="/payments" class="nav-item" class:active={$page.url.pathname.startsWith('/payments')}>
-        <span class="nav-icon">💳</span> Pagamenti
+    <a href="/events" class="nav-item" class:active={$page.url.pathname.startsWith('/events')}>
+        <span class="nav-icon">🗓️</span> Eventi
     </a>
-    <a href="/posts" class="nav-item" class:active={$page.url.pathname.startsWith('/posts')}>
-        <span class="nav-icon">📰</span> Post
+    <a href="/profile" class="nav-item" class:active={$page.url.pathname.startsWith('/profile')}>
+        <span class="nav-icon">⚙️</span> Profilo
     </a>
 </div>
 
@@ -250,34 +317,29 @@
             
             <h3>Gestione: {$eventStore.eventData?.title || 'Dettagli Evento'}</h3>
 
-            <div class="view-toggle">
-                <button class:active={viewMode === 'list'} on:click={() => viewMode = 'list'}>
+            <div class="view-toggle" style="justify-content: center; background: none;">
+                <button class:active={true}>
                     Lista Giocatori
-                </button>
-                <button style="opacity: 0.5; cursor: not-allowed;" title="Campo da Gioco rimosso">
-                    Campo Rimosso
                 </button>
             </div>
             
-            {#if viewMode === 'list'}
-                {#each Object.entries(teams) as [teamId, team]}
-                    <section class="team-section">
-                        <h4 class="team-title" style="color: {team.color};">Squadra {teamId}</h4>
-                        
-                        {#each team.players as player}
-                            <div class="player-card" style="--team-list-color: {player.color};">
-                                <div class="player-info">
-                                    {player.name}
-                                    <div class="player-meta">
-                                        Ruolo: {player.role}
-                                    </div>
+            {#each Object.entries(teams) as [teamId, team]}
+                <section class="team-section">
+                    <h4 class="team-title" style="color: {team.color};">Squadra {teamId}</h4>
+                    
+                    {#each team.players as player}
+                        <div class="player-card" style="--team-list-color: {player.color};">
+                            <div class="player-info">
+                                {player.name}
+                                <div class="player-meta">
+                                    Ruolo: {player.role}
                                 </div>
-                                <div class="player-rating">{player.rating.toFixed(1)}</div>
                             </div>
-                        {/each}
-                    </section>
-                {/each}
-            {/if}
+                            <div class="player-rating">{player.rating.toFixed(1)}</div>
+                        </div>
+                    {/each}
+                </section>
+            {/each}
             
             <button 
                 on:click={closeModal} 

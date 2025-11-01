@@ -1,14 +1,20 @@
 <script>
     import { page } from '$app/stores';
 
-    const menuItems = [
+    const managementItems = [
         { path: '/events', icon: '🗓️', label: 'Gestione Eventi' },
         { path: '/posts', icon: '📰', label: 'Notizie & Post' },
         { path: '/payments', icon: '💳', label: 'Registro Pagamenti' },
         { path: '/polls', icon: '📊', label: 'Sondaggi' },
-        { path: '/', icon: '🏠', label: 'Dashboard Principale' }, // La tua rotta principale
     ];
-
+    
+    const personalItems = [
+        { path: '/profile', icon: '👤', label: 'Il Mio Profilo' },
+        { path: '/roster', icon: '👥', label: 'Giocatori (Roster)' },
+        { path: '/settings', icon: '⚙️', label: 'Impostazioni' },
+        { path: '/report', icon: '🚨', label: 'Segnalazioni Admin' },
+    ];
+    
     let isMobileMenuOpen = false;
 
     function closeMenu() {
@@ -19,63 +25,13 @@
 </script>
 
 <style>
-    .sidebar {
-        width: 250px;
-        min-height: 100vh;
-        background-color: var(--sidebar-bg); /* Sfondo scuro per Sidebar */
-        padding: 20px 0;
-        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
-        position: fixed;
-        left: 0;
-        top: 0;
-        z-index: 1000;
-        transition: transform 0.3s ease-in-out;
-    }
-
-    .menu-item {
-        display: flex;
-        align-items: center;
-        padding: 12px 20px;
-        color: var(--text-color);
-        text-decoration: none;
-        font-weight: 500;
-        transition: background-color 0.2s, color 0.2s;
-        border-left: 5px solid transparent;
-    }
-
-    .menu-item:hover {
-        background-color: var(--accent-color-light); /* Colore leggero al passaggio */
-    }
-
-    .menu-item.active {
-        background-color: var(--accent-color); /* Colore primario per l'attivo */
-        border-left: 5px solid var(--accent-color-glow); /* Linea Glow */
-        color: var(--text-color-bright);
-    }
-
-    .menu-item span {
-        margin-left: 10px;
-    }
-    
-    /* Responsive Mobile */
-    @media (max-width: 768px) {
-        .sidebar {
-            transform: translateX(calc(-100% + 50px)); /* Nasconde parzialmente */
-            width: 80%; /* Occupa più spazio quando è aperta */
-        }
-        .sidebar.open {
-            transform: translateX(0); /* Mostra completamente */
-            box-shadow: 5px 0 10px rgba(0, 0, 0, 0.5);
-        }
-        .menu-toggle {
-            position: fixed;
-            top: 15px;
-            left: 15px;
-            z-index: 1001;
-            font-size: 24px;
-            cursor: pointer;
-            color: var(--accent-color-glow);
-        }
+    /* ... (MANTENERE GLI STILI ESISTENTI) ... */
+    .menu-section-title {
+        color: #888;
+        font-size: 0.9em;
+        padding: 15px 20px 5px;
+        text-transform: uppercase;
+        font-weight: bold;
     }
 </style>
 
@@ -85,7 +41,9 @@
 
 <nav class="sidebar" class:open={isMobileMenuOpen}>
     <h2 style="padding: 0 20px 10px; color: var(--accent-color-glow);">Gestione Scarpa</h2>
-    {#each menuItems as item}
+    
+    <div class="menu-section-title">Amministrazione</div>
+    {#each managementItems as item}
         <a 
             href={item.path} 
             class="menu-item" 
@@ -95,6 +53,28 @@
             {item.icon} <span>{item.label}</span>
         </a>
     {/each}
+    
+    <div class="menu-section-title">Area Personale</div>
+    {#each personalItems as item}
+        <a 
+            href={item.path} 
+            class="menu-item" 
+            class:active={$page.url.pathname === item.path}
+            on:click={closeMenu}
+        >
+            {item.icon} <span>{item.label}</span>
+        </a>
+    {/each}
+    
+    <div class="menu-section-title" style="margin-top: 15px;">Utilità</div>
+    <a 
+        href="/" 
+        class="menu-item" 
+        class:active={$page.url.pathname === '/'}
+        on:click={closeMenu}
+    >
+        🏠 <span>Dashboard Principale</span>
+    </a>
 </nav>
 
 {#if isMobileMenuOpen && typeof window !== 'undefined' && window.innerWidth < 768}

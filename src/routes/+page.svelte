@@ -1,11 +1,9 @@
 <script>
-    // Questo import deve corrispondere al file +page.server.js
     export let data; 
     
-    // L'URL del Backend è l'URL del tuo unico progetto
     const BOT_VERCEL_URL = 'https://scarpari-inside-20.vercel.app'; 
     
-    // Variabili JS per correggere l'errore di sintassi Svelte/Vite
+    // Correzione errore sintassi Svelte/Vite
     const SUCCESS_COLOR = 'var(--success-color)';
     const DEFAULT_COLOR = '#ccc'; 
 
@@ -32,11 +30,12 @@
             if (response.ok) {
                 alert(`✅ Azione '${action.toUpperCase()}' completata!`);
             } else {
+                // L'errore del server ora dovrebbe apparire qui se non è un errore di rete
                 alert(`❌ Errore in '${action.toUpperCase()}': ${result.detail || result.error || 'Errore sconosciuto.'}`);
             }
 
         } catch (e) {
-            alert(`❌ Errore di rete: Impossibile connettersi a ${BOT_VERCEL_URL}.`);
+            alert(`❌ Errore di rete: Impossibile connettersi a ${BOT_VERCEL_URL}. Questo potrebbe essere un problema CORS.`);
         } finally {
             processingEventId = null;
         }
@@ -44,39 +43,13 @@
 </script>
 
 <style>
-    /* Rimuovi tutto lo stile CSS che avevamo nel file, 
-       ci concentriamo solo sulle classi globali in app.css */
-    .event-list {
-        display: grid;
-        gap: 15px;
-        margin-top: 20px;
-    }
-    .event-card {
-        padding: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .event-info h3 {
-        margin: 0 0 5px 0;
-        color: var(--text-color);
-        border: none;
-        padding: 0;
-    }
-    .event-info p {
-        margin: 0;
-        color: rgba(224, 224, 255, 0.7);
-        font-size: 0.9em;
-    }
-    .action-buttons {
-        display: flex;
-        gap: 10px;
-        flex-shrink: 0;
-    }
-    .btn-vote {
-        background-color: #5555ff;
-        color: white;
-    }
+    .event-list { display: grid; gap: 15px; margin-top: 20px; }
+    .event-card { padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+    .event-info h3 { margin: 0 0 5px 0; color: var(--text-color); border: none; padding: 0; }
+    .event-info p { margin: 0; color: rgba(224, 224, 255, 0.7); font-size: 0.9em; }
+    .action-buttons { display: flex; gap: 10px; flex-shrink: 0; }
+    .btn-vote { background-color: #5555ff; color: white; }
+    .btn-vote:hover { background-color: #4444dd; }
 </style>
 
 <div class="panel">

@@ -1,29 +1,53 @@
 <script>
     import TopNavBar from '$lib/components/TopNavBar.svelte';
-    import { fly } from 'svelte/transition';
+    import { fly, slide } from 'svelte/transition';
+    import { quintOut } from 'svelte/easing';
 
-    // Dati simulati dei pagamenti
-    const payments = [
-        { id: 1, date: '25/09/2025', description: 'Quota Mensile Settembre', amount: 25.00, status: 'Pagato' },
-        { id: 2, date: '25/10/2025', description: 'Quota Mensile Ottobre', amount: 25.00, status: 'In Attesa' },
-        { id: 3, date: '10/11/2025', description: 'Acquisto Maglia Allenamento', amount: 35.00, status: 'Pagato' },
-        { id: 4, date: '25/11/2025', description: 'Quota Mensile Novembre', amount: 25.00, status: 'Scaduto' },
+    // Dati simulati dei giocatori
+    let players = [
+        { id: 1, name: 'Mario Rossi', present: true, payment: 10, method: 'cash', late: false, yellowCard: false, completed: false },
+        { id: 2, name: 'Andrea Bianchi', present: true, payment: 10, method: 'digital', late: false, yellowCard: false, completed: false },
+        { id: 3, name: 'Luca Verdi', present: true, payment: 10, method: 'cash', late: false, yellowCard: false, completed: false },
+        { id: 4, name: 'Simone Neri', present: false, payment: 10, method: 'cash', late: false, yellowCard: false, completed: false },
     ];
 
-    // Riassunto Finanziario
-    const balance = {
-        owed: 50.00,
-        paidLastMonth: 25.00,
-        pending: 25.00,
+    // Simula i dati della partita
+    const matchInfo = {
+        date: '25/09/2025',
+        opponent: 'Squadra Avversaria',
+        costPerPlayer: 10.00
     };
 
-    function handlePayNow(id) {
-        alert(`Azione: Avvia processo di pagamento per ID ${id}`);
-        // In un'app reale: Navigazione a Stripe/PayPal
-    }
+    /**
+     * Completa la riga del giocatore, spostandola in basso
+     * @param {number} id - ID del giocatore
+     */
+    function completeTracking(id) {
+        players = players.map(p => {
+            if (p.id === id && p.present) {
+                // Imposta 'completed' a true per attivare la transizione
+                return { ...p, completed: true };
+            }
+            return p;
+        });
 
-    // Variabile per il filtro (Non implementiamo il filtro completo qui, ma prepariamo l'UI)
-    let filterStatus = 'all'; // 'all', 'paid', 'owed'
+        // Dopo un breve ritardo per la transizione, sposta l'elemento completato in fondo all'array
+        setTimeout(() => {
+            const completedPlayer = players.find(p => p.id === id && p.completed);
+            
+            if (completedPlayer) {
+                // Filtra gli elementi non completati e li mette in testa
+                const incompletePlayers = players.filter(p => p.id !== id && !p.completed);
+                
+                // Ricrea l'array con i completati in fondo
+                players = [...incompletePlayers, completedPlayer];
+            }
+        }, 600); // 600ms per la transizione
+    }
+    
+    // Filtra i giocatori da visualizzare: incompleti sopra, completati sotto
+    $: visiblePlayers = [...players].sort((a, b) => (a.completed === b.completed ? 0 : a.completed ? 1 : -1));
+
 </script>
 
 <style>
@@ -36,164 +60,269 @@
         padding-bottom: 20px;
     }
 
-    /* Stili Card Riassunto */
-    .summary-card {
+    .match-header {
         background: var(--panel-bg);
         border-radius: 12px;
-        padding: 20px;
-        margin: 20px 0;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-        display: flex;
-        justify-content: space-around;
-        text-align: center;
-        border-top: 4px solid var(--accent-color);
-    }
-
-    .summary-item .value {
-        font-size: 1.8rem;
-        font-weight: 900;
-        margin-bottom: 4px;
-    }
-    .summary-item .label {
-        font-size: 0.8rem;
-        color: var(--secondary-accent);
-    }
-
-    /* Colori Specifici per il Riassunto */
-    .value.owed { color: var(--danger-color); }
-    .value.paid { color: var(--success-color); }
-    .value.pending { color: var(--warning-color); }
-
-    /* Stili Transazioni (Lista) */
-    .transaction-list {
-        margin-top: 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .transaction-item {
-        background: var(--input-bg);
-        border-radius: 8px;
         padding: 15px;
-        display: grid;
-        grid-template-columns: 2fr 1fr 1fr; /* Descrizione, Stato, Importo */
-        gap: 10px;
-        align-items: center;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        border-left: 5px solid var(--panel-bg);
-    }
-    
-    .status-badge {
-        font-size: 0.75rem;
-        padding: 5px 8px;
-        border-radius: 12px;
+        margin: 20px 0;
         text-align: center;
-        font-weight: 700;
-        width: fit-content;
+        border-bottom: 3px solid var(--accent-color);
     }
-
-    .status-Pagato {
-        background-color: var(--success-color-low);
-        color: var(--success-color);
-    }
-    .status-InAttesa {
-        background-color: var(--warning-color-low);
-        color: var(--warning-color);
-    }
-    .status-Scaduto {
-        background-color: var(--danger-color-low);
-        color: var(--danger-color);
-    }
-    
-    .description {
-        font-weight: 600;
+    .match-title {
+        font-size: 1.5rem;
+        font-weight: 800;
         color: var(--text-color-bright);
     }
-    .date {
-        font-size: 0.8rem;
+    .match-details {
+        font-size: 0.9rem;
         color: var(--secondary-accent);
-        margin-top: 2px;
+        margin-top: 5px;
     }
-    .amount {
-        font-weight: 900;
-        font-size: 1.1rem;
-        text-align: right;
+
+    /* Lista e Elementi Giocatore */
+    .player-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        margin-top: 20px;
+    }
+
+    .player-row {
+        background: var(--input-bg);
+        padding: 15px;
+        border-radius: 12px;
+        border-left: 5px solid var(--panel-bg);
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+        transition: all 0.5s ease-in-out;
     }
     
-    /* Pulsante di Pagamento */
-    .pay-button {
+    .player-row.completed {
+        /* Stile per la riga completata */
+        opacity: 0.6;
+        border-left-color: var(--success-color);
+    }
+
+    .player-name-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-color-bright);
+    }
+
+    .present-toggle {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 2px solid var(--secondary-accent);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .present-toggle.is-present {
+        background: var(--success-color);
+        border-color: var(--success-color);
+    }
+
+    .actions-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--panel-bg);
+    }
+
+    /* Stile Toggle Buttons (Ritardo, Cartellino) */
+    .action-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 8px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+        background: var(--panel-bg);
+        color: var(--secondary-accent);
+        transition: background 0.2s, color 0.2s;
+    }
+    .action-toggle.active {
+        color: black;
+    }
+    .action-toggle.late.active {
+        background: var(--warning-color);
+    }
+    .action-toggle.card.active {
+        background: var(--danger-color);
+    }
+    
+    /* Stile Toggle Pagamento */
+    .payment-method-toggle {
+        grid-column: span 3; /* Occupa tutta la larghezza */
+        display: flex;
+        background: var(--panel-bg);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .payment-method-toggle button {
+        flex: 1;
+        padding: 8px;
+        border: none;
+        background: transparent;
+        color: var(--secondary-accent);
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+    }
+    .payment-method-toggle button.active {
         background: var(--accent-color);
         color: black;
+    }
+    
+    /* Pulsante Completa */
+    .complete-button-container {
+        grid-column: span 3;
+        text-align: center;
+        padding-top: 10px;
+    }
+    .complete-button {
+        background: var(--success-color);
+        color: black;
         border: none;
-        padding: 8px 15px;
-        border-radius: 20px;
+        padding: 10px 20px;
+        border-radius: 25px;
         font-weight: 700;
         cursor: pointer;
-        transition: background-color 0.2s;
-        margin-top: 10px;
+        transition: background 0.2s;
     }
-    .pay-button:hover {
-        background: var(--accent-color-glow);
+    .complete-button:disabled {
+        background: var(--secondary-accent);
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    .complete-button:hover:not(:disabled) {
+        background: var(--success-color-glow);
+    }
+    
+    /* Intestazione per le transizioni completate */
+    .completed-section-title {
+        margin-top: 30px;
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--secondary-accent);
+        padding-bottom: 5px;
+        border-bottom: 1px dashed var(--input-bg);
     }
 
 </style>
 
 <svelte:head>
-    <title>Scarpa Inside | Pagamenti</title>
+    <title>Scarpa Inside | Gestione Partita</title>
 </svelte:head>
 
 <div class="app-container">
     <TopNavBar />
 
     <h1 class="page-title" transition:fly={{ y: -50, duration: 500 }}>
-        Dettaglio Finanziario
+        Tracker Partita
     </h1>
-
-    <section class="summary-card" transition:fly={{ y: 50, duration: 500, delay: 100 }}>
-        <div class="summary-item">
-            <div class="value owed" style="color: var(--danger-color);">{balance.owed.toFixed(2)} €</div>
-            <div class="label">TOTALE DOVUTO</div>
-        </div>
-        <div class="summary-item">
-            <div class="value paid" style="color: var(--success-color);">{balance.paidLastMonth.toFixed(2)} €</div>
-            <div class="label">Ultimo Pagamento</div>
-        </div>
-        <div class="summary-item">
-            <div class="value pending" style="color: var(--warning-color);">{balance.pending.toFixed(2)} €</div>
-            <div class="label">In Scadenza</div>
-        </div>
-    </section>
-
-    <h2 class="section-title">Storico Transazioni</h2>
     
-    <div class="transaction-list">
-        {#each payments as item (item.id)}
-            <div class="transaction-item" 
-                 transition:fly={{ x: 50, duration: 500, delay: item.id * 50 }} 
-                 style="border-left-color: var(--{item.status === 'Pagato' ? 'success' : item.status === 'Scaduto' ? 'danger' : 'warning'}-color);">
-                
-                <div>
-                    <div class="description">{item.description}</div>
-                    <div class="date">{item.date}</div>
+    <div class="match-header" transition:fly={{ y: 50, duration: 500, delay: 100 }}>
+        <div class="match-title">VS {matchInfo.opponent}</div>
+        <div class="match-details">{matchInfo.date} • Quota: {matchInfo.costPerPlayer.toFixed(2)} €</div>
+    </div>
+
+    <h2 class="section-title">Traccia Giocatori</h2>
+    
+    <div class="player-list">
+        {#each visiblePlayers as player (player.id)}
+            <div 
+                class="player-row" 
+                class:completed={player.completed}
+                in:slide={{ duration: 300 }}
+                out:slide={{ duration: 500, easing: quintOut }}
+            >
+                <div class="player-name-section">
+                    <span>{player.name}</span>
+                    <div 
+                        class="present-toggle" 
+                        class:is-present={player.present} 
+                        on:click={() => player.present = !player.present}
+                    >
+                        {#if player.present}
+                            ✓
+                        {/if}
+                    </div>
                 </div>
 
-                <div class="status">
-                    <span class="status-badge status-{item.status.replace(/\s/g, '')}">
-                        {item.status.toUpperCase()}
-                    </span>
-                </div>
-
-                <div class="amount">
-                    {item.amount.toFixed(2)} €
-                    {#if item.status !== 'Pagato'}
-                        <button class="pay-button" on:click={() => handlePayNow(item.id)}>
-                            Paga Ora
+                {#if player.present}
+                    <div class="actions-grid">
+                        
+                        <button 
+                            class="action-toggle late" 
+                            class:active={player.late}
+                            on:click={() => player.late = !player.late}
+                        >
+                            Ritardo
+                            {#if player.late} <span>🔥</span> {/if}
                         </button>
-                    {/if}
-                </div>
+                        
+                        <button 
+                            class="action-toggle card" 
+                            class:active={player.yellowCard}
+                            on:click={() => player.yellowCard = !player.yellowCard}
+                        >
+                            Cartellino
+                            {#if player.yellowCard} <span>🟨</span> {/if}
+                        </button>
+
+                        <div class="action-toggle" style="justify-content: flex-start; opacity: 0;"></div>
+                        
+                        <div class="payment-method-toggle">
+                            <button 
+                                class:active={player.method === 'cash'} 
+                                on:click={() => player.method = 'cash'}
+                                disabled={player.completed}
+                            >
+                                Contanti
+                            </button>
+                            <button 
+                                class:active={player.method === 'digital'} 
+                                on:click={() => player.method = 'digital'}
+                                disabled={player.completed}
+                            >
+                                Digitale
+                            </button>
+                        </div>
+                        
+                        <div class="complete-button-container">
+                            {#if !player.completed}
+                                <button 
+                                    class="complete-button" 
+                                    on:click={() => completeTracking(player.id)}
+                                >
+                                    REGISTRA PAGAMENTO
+                                </button>
+                            {:else}
+                                <div class="status-Pagato" style="font-weight:700; color:var(--success-color)">REGISTRATO</div>
+                            {/if}
+                        </div>
+                    </div>
+                {/if}
             </div>
         {/each}
     </div>
+    
+    {#if players.filter(p => p.completed).length > 0}
+        <h2 class="completed-section-title" transition:fly={{ duration: 300, delay: 500 }}>
+            Giocatori Registrati
+        </h2>
+    {/if}
 
-    </div>
+</div>

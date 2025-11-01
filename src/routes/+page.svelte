@@ -29,19 +29,24 @@
         alert(`Cleanup avviato per l'evento ${eventId}.`);
     }
     
-    function viewRoster(eventId) {
+    // 🚀 NUOVA FUNZIONE: Gestisce la modifica/navigazione avanzata
+    function manageEvent(eventId) {
+        // In un'app reale, qui reindirizzeremmo a una rotta per la modifica dell'evento:
+        // goto(`/event/edit/${eventId}`);
+        alert(`Azione: Apri Form di Modifica per l'evento ${eventId}.`);
+        
+        // Manteniamo la navigazione alla rotta match/ per il momento, come richiesto
         goto(`/match/${eventId}`); 
     }
 </script>
 
 <style>
-    /* ⚠️ STILI DI BASE E FORZATURE PER IL LAYOUT */
+    /* ⚠️ STILI DI BASE E FORZATURE PER IL LAYOUT (Mantenuti per evitare il problema cache) */
     .event-card {
         background-color: var(--panel-bg);
         border: 1px solid #4a4a75;
         border-radius: 8px;
         padding: 15px;
-        /* Margine inferiore ampio per separare le schede */
         margin-bottom: 30px; 
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         display: block !important; 
@@ -81,7 +86,7 @@
     .event-actions {
         grid-area: actions;
         display: flex !important; 
-        flex-direction: column !important; /* I pulsanti sono SEMPRE impilati */
+        flex-direction: column !important; 
         gap: 8px; 
         min-width: 100%; 
         margin-top: 5px;
@@ -133,8 +138,8 @@
                     </div>
                     
                     <div class="event-actions">
-                        <button class="btn-action btn-primary" on:click={() => viewRoster(event.id)}>
-                            Vota / Visualizza Roster
+                        <button class="btn-action btn-primary" on:click={() => manageEvent(event.id)}>
+                            Modifica / Gestisci Evento
                         </button>
                         
                         {#if !event.is_active}

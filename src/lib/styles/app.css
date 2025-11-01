@@ -1,1 +1,133 @@
+/* src/app.css */
 
+/* 1. Importa Roboto da Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap');
+
+/* 2. Definizione delle Variabili CSS (Tema Dark Mode Hi-Tech) */
+:root {
+    /* Colori Base Dark/Hi-Tech */
+    --bg-color: #0f172a; /* Sfondo scuro principale */
+    --panel-bg: #1e293b; /* Sfondo pannello/card (più chiaro del body) */
+    --sidebar-bg: #10101c; /* Non usato, ma mantenuto per contesto */
+    --text-color: #e0e0ff; /* Testo chiaro */
+    --text-color-bright: #ffffff; /* Testo molto chiaro */
+    
+    /* Colori di Accento */
+    --accent-color: #f59e0b; /* Arancione/Giallo (Usato per l'eroe e i pulsanti principali) */
+    --accent-color-glow: #f9d77f; /* Versione brillante */
+    --secondary-accent: #70d8ff; /* Azzurro (Usato per titoli e dettagli) */
+
+    /* Colori Stato */
+    --success-color: #38b44a; /* Verde */
+    --danger-color: #ef4444; /* Rosso */
+    --warning-color: #ffa502; /* Arancione per warning */
+    --input-bg: #334155; /* Sfondo input */
+    
+    /* Font */
+    font-family: 'Roboto', sans-serif;
+    line-height: 1.6;
+}
+
+/* 3. Stili Generali e Reset */
+* {
+    box-sizing: border-box;
+}
+
+/* 🚀 Correzione per le Barre Fisse: Il contenuto deve scorrere sopra la BottomNavBar */
+:global(body) {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    min-height: 100vh;
+    padding-bottom: 60px; /* Spazio per la BottomNavBar fissa */
+}
+
+/* 4. Stili Titoli e Sezioni (Per la coerenza) */
+h1, h2, h3 {
+    /* Titoli interni alle pagine useranno stili specifici, ma questi sono i globali */
+    color: var(--text-color-bright);
+    font-weight: 700;
+}
+
+.section-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 24px 0 16px;
+    color: var(--secondary-accent); /* Usa l'accento azzurro per i titoli di sezione */
+    border-bottom: 2px solid var(--input-bg);
+    padding-bottom: 5px;
+}
+
+/* 5. Stili Pannelli e Card (Design Card Scura) */
+.panel, .card {
+    background-color: var(--panel-bg);
+    border: 1px solid var(--input-bg); /* Bordo discreto */
+    padding: 20px;
+    border-radius: 12px; /* Angoli più arrotondati */
+    margin-bottom: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+/* 6. Stili Pulsanti Generali */
+button, .btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px; /* Angoli più arrotondati */
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+    color: black; /* Testo scuro sui pulsanti colorati */
+    text-decoration: none; 
+    display: inline-block;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+button:hover, .btn:hover {
+    transform: translateY(-2px); /* Effetto hover più accentuato */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Pulsanti di Colore */
+.btn-primary { 
+    background-color: var(--accent-color); 
+    color: var(--bg-color); /* Testo scuro su giallo */
+}
+.btn-primary:hover { background-color: var(--accent-color-glow); }
+
+.btn-success { background-color: var(--success-color); }
+.btn-success:hover { background-color: #3aa526; }
+
+.btn-danger { background-color: var(--danger-color); }
+.btn-danger:hover { background-color: #cc3946; }
+
+.btn-warning { 
+    background-color: var(--warning-color); 
+    color: var(--bg-color);
+}
+.btn-warning:hover { background-color: #d18702; }
+
+/* 7. Stili Modulo/Input */
+input[type="text"], input[type="date"], input[type="time"], input[type="number"], select, textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--secondary-accent);
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    border-radius: 8px;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+input:focus, select:focus, textarea:focus {
+    border-color: var(--accent-color-glow);
+    outline: none;
+}
+label {
+    color: var(--secondary-accent);
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+/* 8. Utility Class (Da usare per il contenuto) */
+.content-area {
+    padding: 16px;
+}

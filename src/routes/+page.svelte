@@ -1,3 +1,49 @@
+<script>
+    import { fly } from 'svelte/transition';
+    import { goto } from '$app/navigation';
+
+    // Dati simulati per gli eventi 
+    const mockEvents = [
+        { id: 'event-001', day: 'Martedì', title: 'Prova: Partita', date: '01/11/2025', time: '12:42', is_active: false, status: 'In attesa', section: 'Questa settimana' },
+        { id: 'event-002', day: 'Venerdì', title: 'Test: Partita', date: '02/11/2025', time: '12:42', is_active: true, status: 'IN CORSO', section: 'Domani' },
+        { id: 'event-003', day: 'Martedì', title: 'Torneo 1', date: '08/11/2025', time: '20:00', is_active: false, status: 'Completato', section: 'Prossima settimana' },
+    ];
+
+    function getEventsBySection(events) {
+        return events.reduce((acc, event) => {
+            if (!acc[event.section]) {
+                acc[event.section] = [];
+            }
+            acc[event.section].push(event);
+            return acc;
+        }, {});
+    }
+
+    const sections = getEventsBySection(mockEvents);
+
+    function startMatch(eventId) {
+        alert(`Setup avviato per l'evento ${eventId}.`);
+    }
+
+    function cleanupMatch(eventId) {
+        alert(`Cleanup avviato per l'evento ${eventId}.`);
+    }
+    
+    function manageEvent(eventId) {
+        alert(`Azione: Apri Form di Modifica per l'evento ${eventId}.`);
+        goto(`/match/${eventId}`); 
+    }
+
+    function getStatusClass(status) {
+        switch (status) {
+            case 'IN CORSO': return 'status-active';
+            case 'Completato': return 'status-completed';
+            case 'In attesa':
+            default: return 'status-pending';
+        }
+    }
+</script>
+
 <style>
     /* 🎨 NUOVI STILI PER IL DESIGN DARK */
     .event-card {
@@ -25,18 +71,19 @@
         padding-bottom: 8px;
     }
     
-    /* 🚀 CORREZIONE: Layout verticale forzato per tutti gli schermi */
+    /* GRIGLIA A DUE COLONNE PER L'INFORMAZIONE */
     .event-card-inner {
-        /* Non usiamo Grid o Flex, usiamo solo blocchi per impilare */
-        display: block !important; 
-        padding: 0;
+        display: grid !important; 
+        grid-template-areas: 
+            "details actions";
+        grid-template-columns: 2fr 1fr; /* Dettagli più spazio, Azioni meno */
+        gap: 20px; 
+        align-items: center;
     }
     
     .event-details {
-        /* Area dei dettagli */
-        padding-bottom: 15px;
-        border-bottom: 1px dashed #4a4a75;
-        margin-bottom: 15px;
+        grid-area: details;
+        padding-right: 20px;
     }
 
     .event-details p {
@@ -50,24 +97,24 @@
     
     /* AREA AZIONI E STATO */
     .event-actions {
-        /* FORZATURA TOTALE: SEMPRE una colonna */
+        grid-area: actions;
         display: flex !important; 
         flex-direction: column !important; 
         gap: 10px; 
         min-width: 100%; 
     }
 
-    /* Stili per il badge di stato */
+    /* Stili per il badge di stato ispirati al design */
     .status-badge {
         font-weight: bold;
-        padding: 8px 10px;
+        padding: 6px 10px;
         border-radius: 6px;
         text-align: center;
         margin-bottom: 10px;
         color: #ffffff; 
-        font-size: 1em;
+        font-size: 0.9em;
     }
-    .status-active { background-color: #38b44a; } /* Verde - IN CORSO */
+    .status-active { background-color: #38b44a; } /* Verde - In corso */
     .status-completed { background-color: #2b70b4; } /* Blu - Completato */
     .status-pending { background-color: #f7931e; } /* Arancione - In attesa */
 
@@ -76,9 +123,31 @@
         font-weight: 600;
         padding: 10px;
     }
-    
-    /* Media query rimossa: il layout è sempre verticale */
+
+    /* 📱 MEDIA QUERY per Mobile (ritorniamo al layout verticale) */
+    @media (max-width: 700px) {
+        .event-card-inner {
+            grid-template-areas: 
+                "details"
+                "actions";
+            grid-template-columns: 1fr;
+        }
+        .event-details {
+            padding-right: 0;
+            border-bottom: 1px dashed #4a4a75;
+            padding-bottom: 15px;
+            margin-bottom: 10px;
+        }
+    }
 </style>
+
+<svelte:head>
+    <title>Scarpa Inside | Dashboard</title>
+</svelte:head>
+
+<div class="content-header" transition:fly={{ y: -50, duration: 500 }}>
+    <h1>Le partite del torneo.</h1>
+</div>
 
 <div class="event-list-container"> 
     {#each Object.entries(sections) as [sectionTitle, events]}

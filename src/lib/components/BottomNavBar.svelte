@@ -10,11 +10,11 @@
         storeState = value;
     });
 
-    // --- LOGICA MODALE EVENTI INIZIO ---
-
+    // --- LOGICA MODALE EVENTI ---
     let viewMode = 'list'; 
+    let showActionMenu = false; // Stato per il menu Sportivo/Social
 
-    // Dati simulati dei giocatori e delle squadre (usati per la lista)
+    // Dati simulati dei giocatori e delle squadre
     const detailedEventData = {
         participants: [
             // Squadra 1 (Rossa)
@@ -54,15 +54,19 @@
         }
     }
     
-    function openCreateEventFlow() {
-        closeModal();
-        alert("Avvia la procedura per 'Creare un nuovo Evento'.");
-        // Qui potresti reindirizzare a /events/create
+    // --- FUNZIONI MENU AZIONE CENTRALE ---
+    function toggleActionMenu() {
+        showActionMenu = !showActionMenu;
+    }
+
+    function openCreateEventFlow(type) {
+        showActionMenu = false;
+        alert(`Avvia la procedura per 'Creare un nuovo Evento ${type}'.`);
+        // Qui potresti reindirizzare a /events/create?type=sportivo
     }
 
     function openEditEventFlow() {
         closeModal();
-        // In un'app reale passeresti l'ID dell'evento
         alert(`Avvia la modifica per l'evento: ${$eventStore.eventData?.title}`);
         // Qui potresti reindirizzare a /events/edit/{id}
     }
@@ -113,7 +117,7 @@
         margin-bottom: 2px;
     }
 
-    /* Stile Bottone Centrale Rialzato - Semplificato */
+    /* Stile Bottone Centrale Rialzato */
     .center-button-container {
         position: relative;
         display: flex;
@@ -143,9 +147,54 @@
         background: var(--success-color-glow);
         transform: scale(1.05);
     }
+    .center-button.menu-active {
+        transform: rotate(45deg); /* Effetto rotazione per il '+' */
+        background: var(--warning-color);
+    }
 
     /* ------------------------------------- */
-    /* Stili Modale Eventi */
+    /* Stili Menu Azione Centrale */
+    /* ------------------------------------- */
+    .action-menu-overlay {
+        position: fixed;
+        bottom: 70px;
+        left: 0;
+        width: 100%;
+        height: calc(100% - 70px);
+        z-index: 499; 
+    }
+    .action-menu {
+        position: fixed;
+        bottom: 85px; 
+        left: 50%;
+        transform: translateX(-50%);
+        width: 200px;
+        background: var(--panel-bg);
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 501;
+    }
+    .action-menu button {
+        background: var(--bg-color);
+        color: var(--text-color);
+        padding: 10px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .action-menu button:hover {
+        background: var(--input-bg);
+    }
+
+
+    /* ------------------------------------- */
+    /* Stili Modale Eventi (Dettagli + Discord) */
     /* ------------------------------------- */
     .modal-backdrop {
         position: fixed;
@@ -186,11 +235,26 @@
         align-items: center;
         border-bottom: 1px solid var(--panel-bg);
         padding-bottom: 10px;
-        margin-bottom: 20px;
+        margin-bottom: 10px; /* Ridotto per far spazio al link Discord */
     }
     .modal-header h3 {
         margin: 0;
         color: var(--accent-color);
+    }
+    .discord-link {
+        display: block;
+        padding: 10px;
+        margin-bottom: 20px;
+        background: #7289da; /* Colore Discord */
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 700;
+        text-align: center;
+        transition: background 0.2s;
+    }
+    .discord-link:hover {
+        background: #677bc4;
     }
 
     /* Stili Lista (List View) */
@@ -225,67 +289,42 @@
         font-weight: 900;
         color: var(--success-color);
     }
-
-    /* Stili Azioni e Discord */
-    .discord-link {
-        display: block;
-        text-align: center;
-        padding: 10px;
-        margin: 15px 0;
-        background: #7289da; /* Colore Discord */
-        color: white;
-        text-decoration: none;
-        border-radius: 8px;
-        font-weight: 700;
-        transition: background 0.2s;
-    }
-    .discord-link:hover {
-        background: #677bc4;
-    }
-
-    .action-buttons {
-        display: flex;
-        gap: 10px;
-        margin-top: 20px;
-    }
-    .action-buttons button {
-        flex: 1;
-        padding: 12px;
-        border: none;
-        border-radius: 8px;
-        font-weight: 700;
-        cursor: pointer;
-    }
-    .action-buttons .edit {
-        background: var(--accent-color);
-        color: black;
-    }
-    .action-buttons .create {
-        background: var(--primary-color);
-        color: white;
-    }
-
 </style>
+
+{#if showActionMenu}
+    <div class="action-menu-overlay" transition:fade={{ duration: 150 }} on:click={() => showActionMenu = false}></div>
+    <div class="action-menu" transition:fly={{ y: 20, duration: 200, easing: quartOut }}>
+        <button on:click={() => openCreateEventFlow('Sportivo')}>⚽ Crea Evento Sportivo</button>
+        <button on:click={() => openCreateEventFlow('Social')}>🥂 Crea Evento Social</button>
+    </div>
+{/if}
 
 <div class="bottom-nav-bar">
     <a href="/" class="nav-item" class:active={$page.url.pathname === '/'}>
-        <span class="nav-icon">📊</span> Dashboard
+        <span class="nav-icon">🏠</span> HOME
     </a>
-    <a href="/stats" class="nav-item" class:active={$page.url.pathname.startsWith('/stats')}>
-        <span class="nav-icon">🏆</span> Statistiche
+    
+    <a href="/players" class="nav-item" class:active={$page.url.pathname.startsWith('/players')}>
+        <span class="nav-icon">👤</span> GIOCATORI
     </a>
     
     <div class="center-button-container">
-        <a href="/" class="center-button" aria-label="Azione Principale">
+        <button 
+            class="center-button" 
+            class:menu-active={showActionMenu}
+            on:click={toggleActionMenu}
+            aria-label="Crea Nuovo Evento"
+        >
             +
-        </a>
+        </button>
     </div>
     
-    <a href="/events" class="nav-item" class:active={$page.url.pathname.startsWith('/events')}>
-        <span class="nav-icon">🗓️</span> Eventi
+    <a href="/ranking" class="nav-item" class:active={$page.url.pathname.startsWith('/ranking')}>
+        <span class="nav-icon">🏆</span> CLASSIFICA
     </a>
+    
     <a href="/profile" class="nav-item" class:active={$page.url.pathname.startsWith('/profile')}>
-        <span class="nav-icon">⚙️</span> Profilo
+        <span class="nav-icon">⚙️</span> PROFILO
     </a>
 </div>
 
@@ -303,17 +342,20 @@
             </button>
             
             <div class="modal-header">
-                <h3>Dettagli: {$eventStore.eventData?.title || 'Evento'}</h3>
+                <h3>{$eventStore.eventData?.title || 'Dettagli Evento'}</h3>
                 
                 <div style="display: flex; gap: 8px;">
-                    <button on:click={openEditEventFlow} title="Modifica Evento" style="background: none; border: none; font-size: 1.2rem; color: var(--accent-color);">🖊️</button>
-                    <button on:click={openCreateEventFlow} title="Crea Nuovo Evento" style="background: none; border: none; font-size: 1.2rem; color: var(--success-color);">➕</button>
+                    <button on:click={openEditEventFlow} title="Modifica Evento" style="background: none; border: none; font-size: 1.2rem; color: var(--accent-color);">
+                        🖊️ Modifica
+                    </button>
                 </div>
             </div>
 
-            <a href={$eventStore.eventData?.discordLink} target="_blank" class="discord-link">
-                📣 Vai alla Chat Discord
-            </a>
+            {#if $eventStore.eventData?.discordLink}
+                <a href={$eventStore.eventData?.discordLink} target="_blank" class="discord-link">
+                    📣 Chat Discord Partita
+                </a>
+            {/if}
             
             <div style="text-align: center; margin-bottom: 20px;">
                 <p style="font-weight: 600;">Lista Giocatori</p>
@@ -341,7 +383,7 @@
                 on:click={closeModal} 
                 style="width: 100%; padding: 12px; background: var(--success-color); border: none; border-radius: 8px; font-weight: 700; color: black; margin-top: 20px;"
             >
-                CHIUDI
+                CHIUDI DETTAGLI
             </button>
         </div>
     </div>

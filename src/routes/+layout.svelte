@@ -1,41 +1,32 @@
 <script>
-    import '../app.css'; // Importa gli stili globali
-    // ⚠️ Qui dovrai importare la store dell'utente loggato (se usi Sveltekit-Supabase)
-    // import { user } from '$lib/stores/auth'; 
-
-    let loggedIn = true; // Simula l'utente loggato per il test
-    let username = "Admin Scarpari";
+    import '../app.css'; // Assicurati che app.css esista
+    import Sidebar from '$lib/Sidebar.svelte';
 </script>
 
 <style>
-    header {
-        background-color: #121220; /* Scuro, leggermente diverso dal bg */
-        padding: 15px 40px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-    }
-    .logo {
-        color: var(--accent-color);
-        font-size: 1.5em;
-        font-weight: 900;
-        text-decoration: none;
-    }
-    .user-info {
+    :global(body) {
+        background-color: var(--bg-color); /* Sfondo scuro principale */
         color: var(--text-color);
+        margin: 0;
+    }
+    .content {
+        margin-left: 250px; /* Spazio per la sidebar fissa */
+        padding: 20px;
+        min-height: 100vh;
+        transition: margin-left 0.3s;
+    }
+    
+    /* Responsive Mobile */
+    @media (max-width: 768px) {
+        .content {
+            margin-left: 0; /* Su mobile occupa tutto lo spazio */
+            padding-top: 60px; /* Lascia spazio al toggle menu */
+        }
     }
 </style>
 
-<header>
-    <a href="/" class="logo">SCARPARI INSIDE 2.0</a>
-    {#if loggedIn}
-        <div class="user-info">
-            Bentornato, {username}
-        </div>
-    {/if}
-</header>
+<Sidebar />
 
-<main style="max-width: 1200px; margin: 0 auto; padding: 20px 0;">
+<div class="content">
     <slot />
-</main>
+</div>

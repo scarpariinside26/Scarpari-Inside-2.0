@@ -2,7 +2,6 @@
     import { fly } from 'svelte/transition';
     import { goto } from '$app/navigation';
 
-    // Dati simulati per gli eventi (usati per popolare la dashboard)
     const mockEvents = [
         { id: 'event-001', day: 'Martedì', title: 'Prova: Partita', date: '01/11/2025', time: '12:42', is_active: false, status: 'In attesa di Setup', section: 'Questa settimana' },
         { id: 'event-002', day: 'Venerdì', title: 'Test: Partita', date: '02/11/2025', time: '12:42', is_active: true, status: 'PARTITA ATTIVA', section: 'Domani' },
@@ -22,11 +21,11 @@
     const sections = getEventsBySection(mockEvents);
 
     function startMatch(eventId) {
-        alert(`Setup avviato per l'evento ${eventId}. Qui andrà la fetch POST API.`);
+        alert(`Setup avviato per l'evento ${eventId}.`);
     }
 
     function cleanupMatch(eventId) {
-        alert(`Cleanup avviato per l'evento ${eventId}. Qui andrà la fetch POST API.`);
+        alert(`Cleanup avviato per l'evento ${eventId}.`);
     }
     
     function viewRoster(eventId) {
@@ -40,8 +39,9 @@
         border: 1px solid #4a4a75;
         border-radius: 8px;
         padding: 15px;
-        margin-bottom: 15px;
+        margin-bottom: 25px; /* Aumentato il margine per isolare le schede */
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        display: block; /* Assicura che la card sia un blocco completo */
     }
 
     .section-title {
@@ -53,17 +53,19 @@
         padding-bottom: 5px;
     }
     
-    /* 🚀 CORREZIONE LAYOUT: Forziamo la visualizzazione sempre in colonna (verticale) */
+    /* 🚀 NUOVA CORREZIONE LAYOUT: Usiamo grid per una struttura più robusta */
     .event-card-inner {
-        display: flex;
-        flex-direction: column; /* FORZA ALLINEAMENTO VERTICALE */
+        display: grid;
+        grid-template-areas: 
+            "details"
+            "actions";
+        grid-template-columns: 1fr;
         gap: 15px; 
     }
     
     .event-details {
-        flex-grow: 1;
+        grid-area: details;
         font-size: 0.9em;
-        /* Aggiungo padding-bottom per separare i dettagli dai pulsanti se il gap non basta */
         padding-bottom: 15px;
         border-bottom: 1px dashed #4a4a75;
     }
@@ -73,11 +75,12 @@
     }
     
     .event-actions {
+        grid-area: actions;
         display: flex;
-        flex-direction: column; /* Impila i pulsanti */
+        flex-direction: column; 
         gap: 8px; 
         min-width: 180px; 
-        margin-top: 15px; /* Spazio dopo i dettagli */
+        margin-top: 5px;
     }
 
     .match-status {
@@ -90,10 +93,10 @@
     }
 
     .btn-action {
-        width: 100%; /* I pulsanti occupano l'intera larghezza */
+        width: 100%; 
     }
 
-    /* Rimuoviamo il media query che forzava l'allineamento orizzontale */
+    /* Manteniamo la struttura verticale anche su schermi più grandi */
 </style>
 
 <svelte:head>

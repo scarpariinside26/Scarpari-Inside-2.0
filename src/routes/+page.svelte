@@ -39,11 +39,11 @@
         border: 1px solid #4a4a75;
         border-radius: 8px;
         padding: 15px;
-        /* 🚀 FORZATURA: Margine inferiore ampio per separare le schede */
+        /* Margine inferiore ampio per separare le schede */
         margin-bottom: 30px; 
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        display: block; /* Assicura che ogni evento sia un blocco completo */
-        min-width: 100%; /* Forziamo l'uso dello spazio disponibile */
+        display: block !important; /* FORZATURA CSS */
+        width: 100%;
     }
 
     .section-title {
@@ -57,7 +57,8 @@
     
     /* STRUTTURA INTERNA: Grid per un layout a due aree verticali */
     .event-card-inner {
-        display: grid;
+        /* 🚀 FORZATURA CRUCIALE: Usiamo Grid e forziamo la direzione */
+        display: grid !important; 
         grid-template-areas: 
             "details"
             "actions";
@@ -78,10 +79,10 @@
     
     .event-actions {
         grid-area: actions;
-        display: flex;
-        flex-direction: column; /* I pulsanti sono SEMPRE impilati */
+        display: flex !important; /* FORZATURA */
+        flex-direction: column !important; /* I pulsanti sono SEMPRE impilati */
         gap: 8px; 
-        min-width: 180px; 
+        min-width: 100%; 
         margin-top: 5px;
     }
 

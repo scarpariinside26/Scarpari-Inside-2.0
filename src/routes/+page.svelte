@@ -23,17 +23,13 @@
 
     function startMatch(eventId) {
         alert(`Setup avviato per l'evento ${eventId}. Qui andrà la fetch POST API.`);
-        // Qui andrà la chiamata fetch al tuo /api/match-setup/+server.js
-        // Dopo la risposta, ricaricare i dati.
     }
 
     function cleanupMatch(eventId) {
         alert(`Cleanup avviato per l'evento ${eventId}. Qui andrà la fetch POST API.`);
-        // Qui andrà la chiamata fetch al tuo /api/match-cleanup/+server.js
     }
     
     function viewRoster(eventId) {
-        // Naviga alla pagina di dettaglio evento/voto
         goto(`/match/${eventId}`); 
     }
 </script>
@@ -57,16 +53,19 @@
         padding-bottom: 5px;
     }
     
-    /* Nuovo contenitore per l'allineamento verticale */
+    /* 🚀 CORREZIONE LAYOUT: Forziamo la visualizzazione sempre in colonna (verticale) */
     .event-card-inner {
         display: flex;
-        flex-direction: column; /* Stack verticale su mobile di default */
+        flex-direction: column; /* FORZA ALLINEAMENTO VERTICALE */
         gap: 15px; 
     }
     
     .event-details {
         flex-grow: 1;
         font-size: 0.9em;
+        /* Aggiungo padding-bottom per separare i dettagli dai pulsanti se il gap non basta */
+        padding-bottom: 15px;
+        border-bottom: 1px dashed #4a4a75;
     }
 
     .event-details strong {
@@ -77,7 +76,8 @@
         display: flex;
         flex-direction: column; /* Impila i pulsanti */
         gap: 8px; 
-        min-width: 180px; /* Larghezza minima per i pulsanti */
+        min-width: 180px; 
+        margin-top: 15px; /* Spazio dopo i dettagli */
     }
 
     .match-status {
@@ -93,17 +93,7 @@
         width: 100%; /* I pulsanti occupano l'intera larghezza */
     }
 
-    /* Desktop: Allineamento Orizzontale */
-    @media (min-width: 769px) {
-        .event-card-inner {
-            flex-direction: row; /* Torna all'orizzontale su desktop */
-            justify-content: space-between;
-            align-items: center;
-        }
-        .event-actions {
-            flex-direction: row; /* Pulsanti affiancati su desktop */
-        }
-    }
+    /* Rimuoviamo il media query che forzava l'allineamento orizzontale */
 </style>
 
 <svelte:head>

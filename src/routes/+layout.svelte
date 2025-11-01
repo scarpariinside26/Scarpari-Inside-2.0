@@ -1,29 +1,33 @@
 <script>
-    // ⚠️ ASSICURATI che il percorso sia corretto: deve puntare al tuo file CSS principale
+    // Importa il CSS globale
     import '../app.css'; 
-    import Sidebar from '$lib/Sidebar.svelte';
+    
+    // 🚀 CORREZIONE: Usa l'alias $lib per importare la Sidebar
+    import Sidebar from '$lib/Sidebar.svelte'; 
 </script>
 
 <style>
-    /* ⚠️ Lo stile :global(body) è necessario per impostare lo sfondo Dark Mode */
+    /* Stili Globali Necessari */
     :global(body) {
         background-color: var(--bg-color); 
         color: var(--text-color);
         margin: 0;
         min-height: 100vh;
     }
+    
+    /* Area del Contenuto Principale */
     .content {
-        margin-left: 250px; /* Spazio per la sidebar fissa */
+        margin-left: 250px; /* Spazio per la sidebar fissa su desktop */
         padding: 20px;
         min-height: 100vh;
         transition: margin-left 0.3s;
     }
     
-    /* Media Query per Mobile: Rimuove il margine della sidebar */
+    /* Responsive Mobile: Il contenuto occupa tutto lo spazio */
     @media (max-width: 768px) {
         .content {
             margin-left: 0; 
-            padding-top: 60px; 
+            padding-top: 60px; /* Spazio per il pulsante del menu mobile */
         }
     }
 </style>

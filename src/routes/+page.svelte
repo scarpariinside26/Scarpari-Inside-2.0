@@ -56,27 +56,41 @@
         color: var(--secondary-accent);
     }
 
-    /* Stile Card Evento Live - Di nuovo cliccabile */
+    /* Stile Card Evento Live */
     .event-live-card {
         grid-column: 1 / -1; 
         border-left: 5px solid var(--accent-color);
-        cursor: pointer; /* Riattiviamo il cursore pointer */
+        cursor: pointer; 
         transition: transform 0.2s;
         text-align: left;
+        margin-bottom: 10px; /* Spazio prima del link Discord */
     }
     .event-live-card:hover {
         transform: translateY(-2px);
     }
-    /* Rimuoviamo il messaggio di suggerimento "Gestisci dal basso" */
-    .event-live-card::after {
-        content: none; 
-    }
-
     .confirmation-status {
         font-weight: 700;
         color: var(--success-color);
         margin-top: 5px;
         display: block;
+    }
+    
+    /* Stili Link Discord */
+    .discord-link {
+        display: block;
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 10px;
+        margin-bottom: 20px;
+        background: #7289da; /* Colore Discord */
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 700;
+        transition: background 0.2s;
+    }
+    .discord-link:hover {
+        background: #677bc4;
     }
 </style>
 
@@ -99,6 +113,12 @@
             <p class="card-text">{liveEvent.title} • {liveEvent.location}</p>
             <span class="confirmation-status">{liveEvent.confirmed} / {liveEvent.total} Giocatori Confermati!</span>
         </button>
+        
+        {#if liveEvent.discordLink}
+            <a href={liveEvent.discordLink} target="_blank" class="discord-link">
+                📣 Chat Discord Partita
+            </a>
+        {/if}
 
         <div class="card">
             <div class="card-title">Ultima Presenza</div>

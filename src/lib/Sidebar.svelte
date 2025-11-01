@@ -1,24 +1,23 @@
 <script>
     import { page } from '$app/stores';
 
+    // 🌟 Nuove icone moderne (Heroicons/Emoji)
     const managementItems = [
         { path: '/events', icon: '🗓️', label: 'Gestione Eventi' },
-        { path: '/posts', icon: '📰', label: 'Notizie & Post' },
-        { path: '/payments', icon: '💳', label: 'Registro Pagamenti' },
-        { path: '/polls', icon: '📊', label: 'Sondaggi' },
+        { path: '/posts', icon: '📢', label: 'Notizie & Post' }, // Annuncio
+        { path: '/payments', icon: '💸', label: 'Registro Pagamenti' }, // Borsa/Soldi
+        { path: '/polls', icon: '🗳️', label: 'Sondaggi' }, // Voto
     ];
     
-    // Nuove sezioni richieste
     const personalItems = [
-        { path: '/profile', icon: '👤', label: 'Il Mio Profilo' },
-        { path: '/roster', icon: '👥', label: 'Giocatori (Roster)' },
-        { path: '/settings', icon: '⚙️', label: 'Impostazioni' },
-        { path: '/report', icon: '🚨', label: 'Segnalazioni Admin' },
+        { path: '/profile', icon: '👤', label: 'Il Mio Profilo' }, // Persona
+        { path: '/roster', icon: '👨‍👩‍👧‍👦', label: 'Giocatori (Roster)' }, // Famiglia (Gruppo)
+        { path: '/settings', icon: '⚙️', label: 'Impostazioni' }, // Ingranaggio
+        { path: '/report', icon: '⚠️', label: 'Segnalazioni Admin' }, // Attenzione
     ];
     
     let isMobileMenuOpen = false;
 
-    // Chiude il menu quando si clicca su una voce (necessario per mobile)
     function closeMenu() {
         if (typeof window !== 'undefined' && window.innerWidth < 768) {
             isMobileMenuOpen = false;
@@ -27,21 +26,22 @@
 </script>
 
 <style>
+    /* ⚠️ MANTENERE GLI STILI ESISTENTI PER .sidebar, .menu-item, ecc. (quelli forniti in precedenza) */
+    
     .sidebar {
+        /* ... (gli stili della sidebar come prima) ... */
         width: 250px;
         min-height: 100vh;
         background-color: var(--sidebar-bg); 
         padding: 20px 0;
         box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
-        
-        /* 1. Posizionamento fisso ESSENZIALE */
         position: fixed; 
         left: 0;
         top: 0;
         z-index: 1000;
         transition: transform 0.3s ease-in-out;
     }
-
+    
     .menu-section-title {
         color: #888;
         font-size: 0.9em;
@@ -84,20 +84,18 @@
         font-size: 24px;
         cursor: pointer;
         color: var(--accent-color-glow);
-        display: none; /* Nascosto su desktop */
+        display: none; 
     }
 
     @media (max-width: 768px) {
         .menu-toggle {
-            display: block; /* Visibile su mobile */
+            display: block; 
         }
         .sidebar {
-            /* Nasconde la sidebar fuori dallo schermo su mobile */
             transform: translateX(-100%); 
             width: 80%;
         }
         .sidebar.open {
-            /* La mostra quando isMobileMenuOpen è true */
             transform: translateX(0); 
             box-shadow: 5px 0 10px rgba(0, 0, 0, 0.5);
         }

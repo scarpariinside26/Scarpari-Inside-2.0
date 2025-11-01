@@ -13,7 +13,7 @@
     // Stato di test
     const eventId = $page.params.eventId;
     const isMatchActive = true; 
-    const isMatchOwner = true; // Simula l'admin
+    const isMatchOwner = true; 
     
     // Variabile per gestire la transizione iniziale
     let isMounted = false;

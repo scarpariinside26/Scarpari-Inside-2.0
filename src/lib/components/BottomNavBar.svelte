@@ -13,9 +13,8 @@
     // --- LOGICA MODALE EVENTI INIZIO ---
 
     let viewMode = 'list'; 
-    let showActionMenu = false; // Nuovo stato per il menu di azione centrale
 
-    // Dati simulati dei giocatori e delle squadre
+    // Dati simulati dei giocatori e delle squadre (usati per la lista)
     const detailedEventData = {
         participants: [
             // Squadra 1 (Rossa)
@@ -55,20 +54,17 @@
         }
     }
     
-    // --- NUOVE FUNZIONI PER MENU AZIONE ---
-    function toggleActionMenu() {
-        showActionMenu = !showActionMenu;
-    }
-
-    function openLiveEventModal() {
-        showActionMenu = false;
-        eventStore.openModal({ title: 'Partita Settimanale', date: 'Sabato 2 Nov', confirmed: 10, total: 10, location: 'Campo A' });
-    }
-
     function openCreateEventFlow() {
-        showActionMenu = false;
-        // Placeholder: qui andrà la logica per aprire la modale/pagina di creazione
+        closeModal();
         alert("Avvia la procedura per 'Creare un nuovo Evento'.");
+        // Qui potresti reindirizzare a /events/create
+    }
+
+    function openEditEventFlow() {
+        closeModal();
+        // In un'app reale passeresti l'ID dell'evento
+        alert(`Avvia la modifica per l'evento: ${$eventStore.eventData?.title}`);
+        // Qui potresti reindirizzare a /events/edit/{id}
     }
 
     // --- LOGICA MODALE EVENTI FINE ---
@@ -117,17 +113,17 @@
         margin-bottom: 2px;
     }
 
-    /* Stile Bottone Centrale Rialzato */
+    /* Stile Bottone Centrale Rialzato - Semplificato */
     .center-button-container {
         position: relative;
         display: flex;
         justify-content: center;
-        width: 60px; /* Larghezza per il bottone */
+        width: 60px;
         height: 100%;
     }
     .center-button {
         position: absolute;
-        top: -25px; /* Sposta in alto per l'effetto rialzato */
+        top: -25px; 
         width: 60px;
         height: 60px;
         border-radius: 50%;
@@ -147,47 +143,6 @@
         background: var(--success-color-glow);
         transform: scale(1.05);
     }
-
-    /* ------------------------------------- */
-    /* Stili Menu Azione Centrale */
-    /* ------------------------------------- */
-    .action-menu-overlay {
-        position: fixed;
-        bottom: 70px; /* Sopra la nav bar */
-        left: 0;
-        width: 100%;
-        height: calc(100% - 70px);
-        z-index: 499; /* Sotto il menu ma sopra il resto del contenuto */
-    }
-    .action-menu {
-        position: fixed;
-        bottom: 85px; /* Sopra la nav bar e il bottone centrale */
-        left: 50%;
-        transform: translateX(-50%);
-        width: 200px;
-        background: var(--panel-bg);
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-        padding: 10px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        z-index: 501;
-    }
-    .action-menu button {
-        background: var(--bg-color);
-        color: var(--text-color);
-        padding: 10px;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-    .action-menu button:hover {
-        background: var(--input-bg);
-    }
-
 
     /* ------------------------------------- */
     /* Stili Modale Eventi */
@@ -225,12 +180,17 @@
         color: var(--secondary-accent);
         cursor: pointer;
     }
-    .modal-content h3 {
-        margin-top: 0;
-        color: var(--accent-color);
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         border-bottom: 1px solid var(--panel-bg);
         padding-bottom: 10px;
         margin-bottom: 20px;
+    }
+    .modal-header h3 {
+        margin: 0;
+        color: var(--accent-color);
     }
 
     /* Stili Lista (List View) */
@@ -266,15 +226,46 @@
         color: var(--success-color);
     }
 
-</style>
+    /* Stili Azioni e Discord */
+    .discord-link {
+        display: block;
+        text-align: center;
+        padding: 10px;
+        margin: 15px 0;
+        background: #7289da; /* Colore Discord */
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 700;
+        transition: background 0.2s;
+    }
+    .discord-link:hover {
+        background: #677bc4;
+    }
 
-{#if showActionMenu}
-    <div class="action-menu-overlay" transition:fade={{ duration: 150 }} on:click={() => showActionMenu = false}></div>
-    <div class="action-menu" transition:fly={{ y: 20, duration: 200, easing: quartOut }}>
-        <button on:click={openCreateEventFlow}>Crea Nuovo Evento</button>
-        <button on:click={openLiveEventModal}>Gestisci Partita Live</button>
-    </div>
-{/if}
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    .action-buttons button {
+        flex: 1;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .action-buttons .edit {
+        background: var(--accent-color);
+        color: black;
+    }
+    .action-buttons .create {
+        background: var(--primary-color);
+        color: white;
+    }
+
+</style>
 
 <div class="bottom-nav-bar">
     <a href="/" class="nav-item" class:active={$page.url.pathname === '/'}>
@@ -285,13 +276,9 @@
     </a>
     
     <div class="center-button-container">
-        <button 
-            class="center-button" 
-            on:click={toggleActionMenu}
-            aria-label="Opzioni Eventi"
-        >
+        <a href="/" class="center-button" aria-label="Azione Principale">
             +
-        </button>
+        </a>
     </div>
     
     <a href="/events" class="nav-item" class:active={$page.url.pathname.startsWith('/events')}>
@@ -315,12 +302,21 @@
                 &times;
             </button>
             
-            <h3>Gestione: {$eventStore.eventData?.title || 'Dettagli Evento'}</h3>
+            <div class="modal-header">
+                <h3>Dettagli: {$eventStore.eventData?.title || 'Evento'}</h3>
+                
+                <div style="display: flex; gap: 8px;">
+                    <button on:click={openEditEventFlow} title="Modifica Evento" style="background: none; border: none; font-size: 1.2rem; color: var(--accent-color);">🖊️</button>
+                    <button on:click={openCreateEventFlow} title="Crea Nuovo Evento" style="background: none; border: none; font-size: 1.2rem; color: var(--success-color);">➕</button>
+                </div>
+            </div>
 
-            <div class="view-toggle" style="justify-content: center; background: none;">
-                <button class:active={true}>
-                    Lista Giocatori
-                </button>
+            <a href={$eventStore.eventData?.discordLink} target="_blank" class="discord-link">
+                📣 Vai alla Chat Discord
+            </a>
+            
+            <div style="text-align: center; margin-bottom: 20px;">
+                <p style="font-weight: 600;">Lista Giocatori</p>
             </div>
             
             {#each Object.entries(teams) as [teamId, team]}
@@ -345,7 +341,7 @@
                 on:click={closeModal} 
                 style="width: 100%; padding: 12px; background: var(--success-color); border: none; border-radius: 8px; font-weight: 700; color: black; margin-top: 20px;"
             >
-                SALVA MODIFICHE
+                CHIUDI
             </button>
         </div>
     </div>

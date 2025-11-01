@@ -2,6 +2,7 @@
     import { fly } from 'svelte/transition';
     import { goto } from '$app/navigation';
 
+    // Dati simulati per gli eventi 
     const mockEvents = [
         { id: 'event-001', day: 'Martedì', title: 'Prova: Partita', date: '01/11/2025', time: '12:42', is_active: false, status: 'In attesa di Setup', section: 'Questa settimana' },
         { id: 'event-002', day: 'Venerdì', title: 'Test: Partita', date: '02/11/2025', time: '12:42', is_active: true, status: 'PARTITA ATTIVA', section: 'Domani' },
@@ -34,7 +35,7 @@
 </script>
 
 <style>
-    /* ⚠️ Definizione generale delle schede */
+    /* ⚠️ STILI DI BASE E FORZATURE PER IL LAYOUT */
     .event-card {
         background-color: var(--panel-bg);
         border: 1px solid #4a4a75;
@@ -54,16 +55,9 @@
         margin-bottom: 10px;
         border-bottom: 1px solid var(--accent-color);
         padding-bottom: 5px;
-        display: block !important; 
     }
     
-    /* 🚀 NUOVO STILE CONTENITORE: Rimuove qualsiasi potenziale stile Flexbox ereditato */
-    .event-list-container {
-        display: block !important;
-        width: 100%;
-    }
-    
-    /* STRUTTURA INTERNA: Grid per un layout a due aree verticali */
+    /* STRUTTURA INTERNA: Grid per un layout a due aree verticali (FORZATO) */
     .event-card-inner {
         display: grid !important; 
         grid-template-areas: 
@@ -87,7 +81,7 @@
     .event-actions {
         grid-area: actions;
         display: flex !important; 
-        flex-direction: column !important; 
+        flex-direction: column !important; /* I pulsanti sono SEMPRE impilati */
         gap: 8px; 
         min-width: 100%; 
         margin-top: 5px;

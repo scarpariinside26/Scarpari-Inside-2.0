@@ -1,6 +1,6 @@
 <script>
-    // ✅ CORREZIONE FINALE: Usa l'importazione assoluta (Vite/SvelteKit style)
-    import '/app.css'; 
+    // ✅ CORREZIONE FINALE: Usa l'alias $lib che funziona sempre.
+    import '$lib/styles/app.css'; 
     
 </script>
 

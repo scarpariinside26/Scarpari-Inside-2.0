@@ -13,6 +13,7 @@
     
     // Filtra la lista dei pagamenti
     $: filteredPayments = mockPayments.filter(p => {
+        // 🚀 CORREZIONE: Applichiamo toLowerCase() anche al metodo del pagamento (p.method)
         const methodMatch = filterMethod === 'all' || p.method.toLowerCase() === filterMethod;
         const statusMatch = filterStatus === 'all' || (filterStatus === 'paid' ? p.paid : !p.paid);
         return methodMatch && statusMatch;
@@ -41,6 +42,7 @@
 </script>
 
 <style>
+    /* ... (Stili CSS mantenuti) ... */
     .controls-bar {
         display: flex;
         flex-wrap: wrap;
@@ -54,7 +56,7 @@
         border-radius: 4px;
         overflow: hidden;
         border: 1px solid var(--accent-color);
-        flex-grow: 1; /* Permette al toggle di espandersi */
+        flex-grow: 1; 
         min-width: 250px;
     }
     .toggle-group button {
@@ -107,7 +109,7 @@
     .tag-inactive { background-color: #6c757d; }
     
     @media (max-width: 600px) {
-        .payment-table thead { display: none; } /* Nasconde intestazione su mobile */
+        .payment-table thead { display: none; } 
         .payment-table, .payment-table tbody, .payment-table tr, .payment-table td { display: block; width: 100%; }
         .payment-table tr { margin-bottom: 15px; border: 1px solid #4a4a75; border-radius: 8px; }
         .payment-table td { text-align: right; border: none; position: relative; padding-left: 50%; }

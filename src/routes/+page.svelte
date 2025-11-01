@@ -39,9 +39,11 @@
         border: 1px solid #4a4a75;
         border-radius: 8px;
         padding: 15px;
-        margin-bottom: 25px; /* Aumentato il margine per isolare le schede */
+        /* 🚀 FORZATURA: Margine inferiore ampio per separare le schede */
+        margin-bottom: 30px; 
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        display: block; /* Assicura che la card sia un blocco completo */
+        display: block; /* Assicura che ogni evento sia un blocco completo */
+        min-width: 100%; /* Forziamo l'uso dello spazio disponibile */
     }
 
     .section-title {
@@ -53,7 +55,7 @@
         padding-bottom: 5px;
     }
     
-    /* 🚀 NUOVA CORREZIONE LAYOUT: Usiamo grid per una struttura più robusta */
+    /* STRUTTURA INTERNA: Grid per un layout a due aree verticali */
     .event-card-inner {
         display: grid;
         grid-template-areas: 
@@ -77,7 +79,7 @@
     .event-actions {
         grid-area: actions;
         display: flex;
-        flex-direction: column; 
+        flex-direction: column; /* I pulsanti sono SEMPRE impilati */
         gap: 8px; 
         min-width: 180px; 
         margin-top: 5px;
@@ -95,8 +97,6 @@
     .btn-action {
         width: 100%; 
     }
-
-    /* Manteniamo la struttura verticale anche su schermi più grandi */
 </style>
 
 <svelte:head>

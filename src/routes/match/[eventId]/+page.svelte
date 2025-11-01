@@ -1,47 +1,33 @@
 <script>
     import MatchVoting from '$lib/MatchVoting.svelte';
     import { page } from '$app/stores';
+    import { fly } from 'svelte/transition';
 
-    // Roster di test (Simulazione)
+    // Dati simulati per il Roster
     const MOCK_ROSTER = [
-        { user_id: 'a1b2c3d4-user-1', name: 'Player Alfa', team_name: 'Rossa' },
-        { user_id: 'e5f6g7h8-user-2', name: 'Player Beta', team_name: 'Blu' },
-        { user_id: 'i9j0k1l2-user-3', name: 'Player Gamma', team_name: 'Gialla' },
-        { user_id: 'm3n4o5p6-user-4', name: 'Player Delta', team_name: 'Nera' },
+        { user_id: 'a1b2c3d4-user-1', name: 'Player Alfa', team_name: 'Rossa', status: 'Votato', score: 4.5 },
+        { user_id: 'e5f6g7h8-user-2', name: 'Player Beta', team_name: 'Blu', status: 'Non votato', score: 3.8 },
+        { user_id: 'i9j0k1l2-user-3', name: 'Player Gamma', team_name: 'Gialla', status: 'Non votato', score: 4.1 },
+        { user_id: 'm3n4o5p6-user-4', name: 'Player Delta', team_name: 'Nera', status: 'Votato', score: 4.9 },
     ];
     
-    // Stato di test
+    // Stato di test (puoi modificarli per testare diverse UI)
     const eventId = $page.params.eventId;
-    const isMatchActive = true; 
-    const isMatchOwner = true; 
-    
-    // Variabile per gestire la transizione iniziale
-    let isMounted = false;
+    const isMatchActive = true;     // Se true, mostra lo slider di voto
+    const isMatchOwner = false;    // Se true, mostra i pulsanti Admin
+    const hasUserVoted = false;     // Se true, blocca il voto per l'utente
 </script>
 
 <svelte:head>
-    <title>Vota - Match {eventId.slice(0, 8)}</title>
+    <title>Dettaglio Match {eventId.slice(0, 8)}</title>
 </svelte:head>
 
-<div class="page-transition" class:mounted={isMounted} on:mount={() => isMounted = true}>
+<div transition:fly={{ y: 50, duration: 500 }}>
     <MatchVoting 
         {eventId}
         roster={MOCK_ROSTER}
         {isMatchActive}
         {isMatchOwner}
-        hasUserVoted={false} 
+        {hasUserVoted} 
     />
 </div>
-
-<style>
-    /* Stile per la transizione di entrata della pagina (effetto fade-in) */
-    .page-transition {
-        opacity: 0;
-        transform: translateY(10px);
-        transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-    }
-    .page-transition.mounted {
-        opacity: 1;
-        transform: translateY(0);
-    }
-</style>

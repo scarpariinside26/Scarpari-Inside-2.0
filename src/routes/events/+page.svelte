@@ -1,14 +1,14 @@
 <script>
-    import { fly, fade } from 'svelte/transition'; // Importa anche 'fade'
-    
-    const mockEvents = [
-        // ... (Mantieni i tuoi dati simulati) ...
+    import { fly, fade } from 'svelte/transition'; 
+
+    // ⚠️ CORREZIONE: Cambiato da 'const' a 'let' per permettere la riassegnazione
+    let mockEvents = [ 
         { id: 1, name: 'Torneo Settimanale 1', date: '2025-11-05', time: '20:00', location: 'Discord', duration: '2h', participants: 16, status: 'Active' },
         { id: 2, name: 'Mega Evento Finale', date: '2025-11-20', time: '18:30', location: 'Twitch', duration: '4h', participants: 32, status: 'Pending' },
     ];
     
     let isModalOpen = false;
-    // Nuove variabili per il Form
+    
     let newEvent = {
         name: '', date: '', time: '', location: '', duration: 120, participants: 16
     };
@@ -19,7 +19,7 @@
             return;
         }
         
-        // Simulazione: Aggiunge il nuovo evento ai dati simulati
+        // La riassegnazione qui (riga 24 del log) ora è valida
         const newId = Math.max(...mockEvents.map(e => e.id)) + 1;
         mockEvents = [...mockEvents, {
             id: newId, 

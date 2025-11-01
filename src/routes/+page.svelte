@@ -34,6 +34,7 @@
 </script>
 
 <style>
+    /* ⚠️ Definizione generale delle schede */
     .event-card {
         background-color: var(--panel-bg);
         border: 1px solid #4a4a75;
@@ -42,7 +43,7 @@
         /* Margine inferiore ampio per separare le schede */
         margin-bottom: 30px; 
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        display: block !important; /* FORZATURA CSS */
+        display: block !important; 
         width: 100%;
     }
 
@@ -53,11 +54,17 @@
         margin-bottom: 10px;
         border-bottom: 1px solid var(--accent-color);
         padding-bottom: 5px;
+        display: block !important; 
+    }
+    
+    /* 🚀 NUOVO STILE CONTENITORE: Rimuove qualsiasi potenziale stile Flexbox ereditato */
+    .event-list-container {
+        display: block !important;
+        width: 100%;
     }
     
     /* STRUTTURA INTERNA: Grid per un layout a due aree verticali */
     .event-card-inner {
-        /* 🚀 FORZATURA CRUCIALE: Usiamo Grid e forziamo la direzione */
         display: grid !important; 
         grid-template-areas: 
             "details"
@@ -79,8 +86,8 @@
     
     .event-actions {
         grid-area: actions;
-        display: flex !important; /* FORZATURA */
-        flex-direction: column !important; /* I pulsanti sono SEMPRE impilati */
+        display: flex !important; 
+        flex-direction: column !important; 
         gap: 8px; 
         min-width: 100%; 
         margin-top: 5px;
@@ -108,44 +115,46 @@
     <h1>Le partite del torneo.</h1>
 </div>
 
-{#each Object.entries(sections) as [sectionTitle, events]}
-    <h2 class="section-title">{sectionTitle}</h2>
-    
-    {#each events as event (event.id)}
-        <div class="event-card" transition:fly={{ x: 50, duration: 500 }}>
-            <div class="event-card-inner">
-                <div class="event-details">
-                    <p style="font-size: 1.2em; font-weight: bold; color: var(--accent-color);">{event.day}</p>
-                    <p style="font-size: 1.1em; font-weight: bold; margin-bottom: 5px;">
-                        {event.title}
-                        {#if event.is_active}
-                            <span style="color: var(--success-color); font-size: 0.8em; margin-left: 5px;">(Attiva)</span>
-                        {/if}
-                    </p>
-                    <p>
-                        Data: <strong>{event.date}</strong> alle <strong>{event.time}</strong>
-                    </p>
-                    <p class="{event.is_active ? 'active-status' : 'match-status'}">
-                        Stato: {event.status}
-                    </p>
-                </div>
-                
-                <div class="event-actions">
-                    <button class="btn-action btn-primary" on:click={() => viewRoster(event.id)}>
-                        Vota / Visualizza Roster
-                    </button>
+<div class="event-list-container"> 
+    {#each Object.entries(sections) as [sectionTitle, events]}
+        <h2 class="section-title">{sectionTitle}</h2>
+        
+        {#each events as event (event.id)}
+            <div class="event-card" transition:fly={{ x: 50, duration: 500 }}>
+                <div class="event-card-inner">
+                    <div class="event-details">
+                        <p style="font-size: 1.2em; font-weight: bold; color: var(--accent-color);">{event.day}</p>
+                        <p style="font-size: 1.1em; font-weight: bold; margin-bottom: 5px;">
+                            {event.title}
+                            {#if event.is_active}
+                                <span style="color: var(--success-color); font-size: 0.8em; margin-left: 5px;">(Attiva)</span>
+                            {/if}
+                        </p>
+                        <p>
+                            Data: <strong>{event.date}</strong> alle <strong>{event.time}</strong>
+                        </p>
+                        <p class="{event.is_active ? 'active-status' : 'match-status'}">
+                            Stato: {event.status}
+                        </p>
+                    </div>
                     
-                    {#if !event.is_active}
-                        <button class="btn-action btn-success" on:click={() => startMatch(event.id)}>
-                            Avvia Partita
+                    <div class="event-actions">
+                        <button class="btn-action btn-primary" on:click={() => viewRoster(event.id)}>
+                            Vota / Visualizza Roster
                         </button>
-                    {:else}
-                        <button class="btn-action btn-danger" on:click={() => cleanupMatch(event.id)}>
-                            Pulisci Partita
-                        </button>
-                    {/if}
+                        
+                        {#if !event.is_active}
+                            <button class="btn-action btn-success" on:click={() => startMatch(event.id)}>
+                                Avvia Partita
+                            </button>
+                        {:else}
+                            <button class="btn-action btn-danger" on:click={() => cleanupMatch(event.id)}>
+                                Pulisci Partita
+                            </button>
+                        {/if}
+                    </div>
                 </div>
             </div>
-        </div>
+        {/each}
     {/each}
-{/each}
+</div>

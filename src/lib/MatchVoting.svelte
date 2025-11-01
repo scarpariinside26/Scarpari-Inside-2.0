@@ -2,26 +2,22 @@
     import { onMount } from 'svelte';
     import { slide } from 'svelte/transition';
 
-    // --- PROPS NECESSARI ---
     export let eventId;
     export let roster = []; 
     export let isMatchOwner = false;
     export let isMatchActive = false;
-    export let hasUserVoted = false; // Stato per disabilitare il voto dopo il primo invio
+    export let hasUserVoted = false;
     
-    // ⚠️ SOSTITUISCI CON IL TUO DOMINIO BOT VERCELL REALE
-    const BOT_VERCEL_URL = 'https://scarpari-inside-2-0.vercel.app'; 
+    const BOT_VERCEL_URL = 'https://scarpari-inside-20.vercel.app'; 
     const MAX_SCORE = 5;
 
-    // --- VARIABILI DI STATO ---
     let user = { id: 'TEST_VOTER_ID', jwt: 'TEST_JWT_TOKEN' }; 
-    let votes = {}; // { voted_user_id: score }
-    let feedback = {}; // { voted_user_id: { status: 'success' | 'error', message: '...' } }
-    let submissionStatus = ''; // 'pending' | 'success' | 'error'
+    let votes = {}; 
+    let feedback = {}; 
+    let submissionStatus = ''; 
 
     onMount(() => {
         roster.forEach(player => {
-            // Inizializza i voti a 1 per un feedback visivo immediato
             votes[player.user_id] = 1; 
         });
         votes = votes; 
@@ -47,9 +43,6 @@
         feedback[votedPlayerId] = { status: 'pending', message: 'Invio...' };
         feedback = feedback;
         
-        // *************************************************************
-        // ⚠️ Questa è la logica che chiamerà il tuo Backend /api/match-vote
-        // *************************************************************
         try {
             const response = await fetch(`${BOT_VERCEL_URL}/api/match-vote`, {
                 method: 'POST',
@@ -71,14 +64,12 @@
                 feedback[votedPlayerId] = { status: 'error', message: data.error || "Errore sconosciuto." };
             }
         } catch (e) {
-            feedback[votedPlayerId] = { status: 'error', message: "Errore di rete/connessione." };
+            feedback[votedPlayerId] = { status: 'error', message: "Errore di rete/connessione (CORS?)." };
         } finally {
             feedback = feedback;
         }
-        // *************************************************************
     }
 
-    // --- FUNZIONI ADMIN (per test UI/UX) ---
     async function handleAdminAction(endpoint) {
         submissionStatus = 'pending';
         // Simulazione: In un ambiente reale, questa chiamata API attiva il bot
@@ -89,84 +80,20 @@
 </script>
 
 <style>
-    .voter-container {
-        max-width: 900px;
-        margin: 20px auto;
-    }
-    .player-card {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px 25px;
-        margin-bottom: 10px;
-        position: relative;
-        overflow: hidden; /* Nasconde il pseudo-elemento overflow */
-    }
-    /* Effetto 'Scanline' Hi-Tech */
-    .player-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(rgba(0,0,0,0) 50%, rgba(0,255,255,0.05) 50%);
-        pointer-events: none;
-    }
+    .voter-container { max-width: 900px; margin: 20px auto; }
+    .player-card { display: flex; justify-content: space-between; align-items: center; padding: 15px 25px; margin-bottom: 10px; position: relative; overflow: hidden; }
+    .player-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(0,0,0,0) 50%, rgba(0,255,255,0.05) 50%); pointer-events: none; }
 
-    .player-info {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-    }
-    .team-badge {
-        font-weight: bold;
-        padding: 5px 12px;
-        border-radius: 5px;
-        color: white;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-        font-size: 0.9em;
-    }
-    .score-control {
-        display: flex;
-        gap: 15px;
-        align-items: center;
-        width: 450px; 
-    }
-    input[type="range"] {
-        flex-grow: 1;
-        -webkit-appearance: none;
-        height: 8px;
-        background: #4a4a75;
-        border-radius: 4px;
-        box-shadow: 0 0 5px rgba(0, 188, 212, 0.5); /* Bagliore Hi-Tech */
-    }
-    input[type="range"]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: var(--accent-color);
-        cursor: pointer;
-        box-shadow: 0 0 8px var(--accent-color);
-        transition: background 0.2s;
-    }
-    .admin-controls {
-        display: flex;
-        gap: 15px;
-        margin-top: 25px;
-        padding: 20px;
-        border: 1px dashed var(--accent-color);
-        border-radius: 8px;
-    }
+    .player-info { display: flex; align-items: center; gap: 20px; }
+    .team-badge { font-weight: bold; padding: 5px 12px; border-radius: 5px; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); font-size: 0.9em; }
+    .score-control { display: flex; gap: 15px; align-items: center; width: 450px; }
+    input[type="range"] { flex-grow: 1; -webkit-appearance: none; height: 8px; background: #4a4a75; border-radius: 4px; box-shadow: 0 0 5px rgba(0, 188, 212, 0.5); }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent-color); cursor: pointer; box-shadow: 0 0 8px var(--accent-color); transition: background 0.2s; }
+    .admin-controls { display: flex; gap: 15px; margin-top: 25px; padding: 20px; border: 1px dashed var(--accent-color); border-radius: 8px; }
     .pending { color: orange; }
     .success { color: var(--success-color); font-weight: bold; }
     .error { color: var(--danger-color); font-weight: bold; }
-    .feedback-box {
-        width: 150px;
-        text-align: right;
-    }
+    .feedback-box { width: 150px; text-align: right; }
 </style>
 
 <div class="voter-container">

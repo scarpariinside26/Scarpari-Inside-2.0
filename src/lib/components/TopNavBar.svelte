@@ -1,9 +1,6 @@
 <script>
     import { page } from '$app/stores';
     
-    // Nome del file logo fornito. ASSICURATI CHE IL NOME SIA CORRETTO E IL FILE SIA IN /static
-    const LOGO_SRC = "/Scarpari Inside simplelogo_2023.png"; 
-    
     // Stato fittizio per le notifiche
     let unreadNotifications = 2;
 
@@ -58,7 +55,7 @@
         font-size: 0.75rem;
         cursor: pointer;
         transition: background 0.2s;
-        white-space: nowrap; /* Evita che il testo vada a capo */
+        white-space: nowrap; 
     }
     .service-button:hover {
         background: var(--bg-color);
@@ -85,41 +82,23 @@
         color: var(--text-color);
     }
 
-    /* ------------------------------------- */
-    /* Logo Principale Centrato e Notifiche */
-    /* ------------------------------------- */
-    .center-content {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        position: absolute; 
+    /* Campana Notifiche Centrale (Ora l'unico elemento al centro della barra) */
+    .center-notification-area {
+        position: absolute;
         left: 50%;
         transform: translateX(-50%);
-        height: 100%;
-        gap: 2px;
-    }
-    
-    .app-logo {
-        height: 35px;
-        width: auto;
-    }
-    
-    /* Campana Notifiche Centrata */
-    .notification-area {
-        position: relative;
         cursor: pointer;
         color: var(--secondary-accent);
         transition: color 0.2s;
-        font-size: 1.2rem;
+        font-size: 1.8rem; /* Più grande per occupare il centro */
     }
-    .notification-area:hover {
+    .center-notification-area:hover {
         color: var(--accent-color);
     }
     .notification-badge {
         position: absolute;
-        top: -5px;
-        right: -5px;
+        top: 15px; /* Sposta il badge in alto a destra della campana */
+        right: -8px; 
         background: var(--error-color);
         color: white;
         border-radius: 50%;
@@ -153,23 +132,20 @@
         </button>
     </div>
 
-    <div class="center-content">
-        <img src={LOGO_SRC} alt="Logo Scarpa Inside" class="app-logo" on:click={() => window.location.href = '/'} style="cursor: pointer;"/>
-        
-        <div class="notification-area" on:click={showNotifications}>
-            🔔
-            {#if unreadNotifications > 0}
-                <div class="notification-badge">
-                    {unreadNotifications > 9 ? '9+' : unreadNotifications}
-                </div>
-            {/if}
-        </div>
+    <div class="center-notification-area" on:click={showNotifications}>
+        🔔
+        {#if unreadNotifications > 0}
+            <div class="notification-badge">
+                {unreadNotifications > 9 ? '9+' : unreadNotifications}
+            </div>
+        {/if}
     </div>
     
     <div class="side-group">
         <button class="service-button" on:click={() => navigate('/payments')}>
             💰 PAGAMENTI
         </button>
+        
         <button class="service-button" on:click={() => navigate('/settings')} style="padding: 6px 8px; font-size: 1rem;">
             ⚙️
         </button>

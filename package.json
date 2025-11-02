@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "npm install --legacy-peer-deps"
   },
   "devDependencies": {
     "@sveltejs/adapter-vercel": "^5.3.0",

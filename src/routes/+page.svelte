@@ -8,6 +8,10 @@
     // --- VARIABILI DI STATO ---
     let showEditModal = false;
     let isEventExpanded = false;
+    
+    // LOGICA VOTAZIONI: SIMULAZIONE STATO PARTITA
+    let isMatchFinished = true; // Imposta su TRUE per mostrare il pulsante Vota
+    
     const isAdmin = true; // Simula l'admin
     const LOGO_SRC = "/Scarpari Inside simplelogo_2023.png"; 
 
@@ -64,24 +68,14 @@
         return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
     });
 
-    /** Funzione per aprire/chiudere la Modale di Modifica Evento */
-    function openEditModal(event) {
-        event.stopPropagation();
-        showEditModal = true;
-    }
+    function openEditModal(event) { event.stopPropagation(); showEditModal = true; }
+    function closeEditModal() { showEditModal = false; }
+    function toggleEventExpansion() { isEventExpanded = !isEventExpanded; }
+    function handleAdminAction(action) { alert(`Azione amministrativa: ${action} per l'evento ${liveEvent.title}`); closeEditModal(); }
     
-    function closeEditModal() {
-        showEditModal = false;
-    }
-    
-    /** Funzione per espandere/collassare la card evento */
-    function toggleEventExpansion() {
-        isEventExpanded = !isEventExpanded;
-    }
-
-    function handleAdminAction(action) {
-        alert(`Azione amministrativa: ${action} per l'evento ${liveEvent.title}`);
-        closeEditModal();
+    function startVoting() {
+        alert('Avvio votazioni per la Partita Settimanale!');
+        // Qui andrebbe la navigazione a una pagina di votazione
     }
 </script>
 
@@ -92,7 +86,7 @@
         min-height: 100vh;
         color: var(--text-color);
         padding: 0 16px;
-        padding-top: 70px; /* Spazio per la Top Bar */
+        padding-top: 70px; 
         padding-bottom: 80px; 
     }
     
@@ -101,10 +95,12 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        padding: 15px 0; /* Spazio verticale sopra la griglia */
+        padding: 15px 0; 
+        /* Spostiamo l'area logo più in alto */
+        margin-top: -15px; 
     }
     .main-logo {
-        height: 60px; /* Logo più grande e impattante */
+        height: 90px; /* Logo ingrandito del 50% rispetto ai precedenti 60px */
         width: auto;
         opacity: 0.95;
     }
@@ -123,9 +119,26 @@
         overflow: hidden;
     }
     
-    /* ... (Stili Card Evento Live, Schede Squadre, Modale - INALTERATI) ... */
+    /* Votazioni Pulsante */
+    .voting-button {
+        grid-column: 1 / -1; 
+        background: var(--warning-color);
+        color: black;
+        font-weight: 800;
+        font-size: 1.1rem;
+        padding: 15px;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        transition: background 0.2s;
+        margin-top: 5px;
+    }
+    .voting-button:hover {
+        background: var(--warning-color-dark);
+    }
 
-    /* Card Evento Live */
+    /* Stili pre-esistenti (Card Evento Live, Schede Squadre, Modale) */
     .event-live-card-wrapper { grid-column: 1 / -1; transition: transform 0.2s; }
     .event-summary { border-left: 5px solid var(--accent-color); cursor: pointer; padding: 10px 15px; background: var(--panel-bg); border-radius: 12px; transition: border-radius 0.3s; }
     .event-live-card-wrapper.expanded .event-summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
@@ -141,16 +154,12 @@
     .detail-row { margin-bottom: 10px; font-size: 0.9rem; }
     .detail-row strong { color: var(--text-color-bright); margin-right: 5px; }
     .description-text { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--panel-bg); font-style: italic; }
-
-    /* Schede Squadre Compattate e Allineate */
     .team-card { padding: 10px; }
     .team-name { font-weight: 800; font-size: 0.9rem; color: var(--team-color); margin-bottom: 5px; text-align: center; border-bottom: 2px solid var(--team-color); padding-bottom: 3px; }
     .team-players-list { font-size: 0.75rem; list-style: none; padding: 0; margin: 0; }
     .player-entry { display: flex; justify-content: space-between; line-height: 1.5; }
     .player-entry-meta { color: var(--secondary-accent); font-weight: 500; margin-right: 5px; }
     .player-entry-rating { font-weight: 700; color: var(--success-color); }
-    
-    /* Modale di Modifica (Nuova) */
     .edit-modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 2000; }
     .edit-modal-content { background: var(--bg-color); border-radius: 15px; width: 90%; max-width: 400px; padding: 20px; z-index: 2001; }
     .edit-modal-content h3 { margin-top: 0; color: var(--accent-color); border-bottom: 1px solid var(--panel-bg); padding-bottom: 10px; margin-bottom: 20px; }
@@ -189,7 +198,6 @@
                         <a href={liveEvent.discordLink} target="_blank" class="discord-link-compact" on:click|stopPropagation>
                             📣
                         </a>
-                        
                         {#if isAdmin}
                             <button class="edit-button-compact" on:click={openEditModal} title="Modifica Evento">
                                 🖊️
@@ -216,6 +224,12 @@
             {/if}
         </div>
 
+        {#if isMatchFinished}
+            <button class="voting-button" on:click={startVoting} transition:fly={{ y: -10, duration: 300 }}>
+                ⭐ VOTA I GIOCATORI DELLA PARTITA!
+            </button>
+        {/if}
+        
         {#each liveEvent.teams as team (team.id)}
             <div class="card team-card" style="--team-color: {team.color}; border-top: 5px solid {team.color};">
                 <div class="team-name">{team.name}</div>

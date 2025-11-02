@@ -1,13 +1,12 @@
-// src/routes/vote/+page.server.js - VERSIONE FINALE CON LOAD E ACTIONS
+// src/routes/vote/+page.server.js - VERSIONE CORRETTA (FIX SINTASSI) E FINALE
+
 import { redirect, fail } from '@sveltejs/kit';
-import { supabase } from '$lib/supabase'; // Assumiamo che tu abbia un client Supabase riutilizzabile qui
 
 /** @type {import('./$types').PageServerLoad} */
 export async function load({ locals }) {
     const supabase = locals.supabase;
     const session = await locals.getSession();
     
-    // Se l'utente non è loggato, non può votare
     if (!session) {
         throw redirect(303, '/login'); 
     }
@@ -32,7 +31,7 @@ export async function load({ locals }) {
         .select(`
             team_name,
             profili_utenti!user_id (
-                id, nome_completo, user_id, // user_id è FONDAMENTALE per voti_partita
+                id, nome_completo, user_id, 
                 portiere, difensore, centrocampista, attaccante 
             )
         `)
@@ -62,7 +61,6 @@ export async function load({ locals }) {
             const teamName = item.team_name;
             const player = item.profili_utenti;
             
-            // Inizializza il voto a 0.0 (non votato) o al voto già espresso
             const initialVote = userVotesMap.get(player.user_id) || 0.0;
 
             if (!teamsMap.has(teamName)) {
@@ -76,8 +74,8 @@ export async function load({ locals }) {
 
             teamsMap.get(teamName).players.push({
                 name: player.nome_completo,
-                profile_id: player.id,    // profili_utenti.id
-                user_id: player.user_id, // auth.users.id (CRUCIALE per inserimento voto)
+                profile_id: player.id,    
+                user_id: player.user_id, 
                 vote: initialVote,
                 isVotable: player.user_id !== session.user.id // L'utente non può votare se stesso
             });
@@ -85,9 +83,8 @@ export async function load({ locals }) {
     }
     
     // --- 5. Dati per la cronologia (risultati precedenti) ---
-    // Logica semplificata: carica le ultime 3 partite completate (non l'evento live)
     const { data: previousMatches } = await supabase
-         .from('tournament_matches') // Carichiamo solo i match del torneo per coerenza
+         .from('tournament_matches') 
          .select('*')
          .order('match_number', { ascending: false })
          .limit(3);
@@ -102,7 +99,6 @@ export async function load({ locals }) {
 
 /** @type {import('./$types').Actions} */
 export const actions = {
-    // ... (La funzione submitVotes rimane invariata rispetto al messaggio precedente) ...
     submitVotes: async ({ request, locals }) => {
         const supabase = locals.supabase;
         const session = await locals.getSession();
@@ -117,7 +113,6 @@ export const actions = {
         
         const rawVotes = JSON.parse(formData.get('votes')); 
         
-        // Mappa i dati nel formato esatto della tabella voti_partita
         const votesToInsert = rawVotes.map(vote => ({
             event_id: eventId,
             voter_user_id: voterUserId,
@@ -137,11 +132,18 @@ export const actions = {
                 ignoreDuplicates: false
             });
 
-        // --- GESTIONE LOG E NOTIFICHE DI TEST ---
+        // --- CORREZIONE: Stringa template su una sola riga per evitare errore di sintassi ---
         if (error) {
             console.error("Errore inserimento voti in voti_partita:", error);
+            // Riga 147 precedente: console.log(`[TEST EMAIL ALERT] ERRORE VOTO su ${voterUserId}: ${error.message}. Notifica inviata a scarpariinside@gmail.com.`);
             console.log(`[TEST EMAIL ALERT] ERRORE VOTO su ${voterUserId}: ${error.message}. Notifica inviata a scarpariinside@gmail.com.`);
-            return fail(500, { error: 'Errore durante il salvataggio dei voti.' });
+            
+            return fail(500, { error: 'Errore durante il salvataggio dei voti. Controlla il console log.' });
         }
+        
+        // Riga 151 precedente: console.log(`[TEST EMAIL ALERT] Voti inviati con successo da ${voterUserId} per l'evento ${eventId}. Notifica di completamento inviata a scarpariinside@gmail.com.`);
+        console.log(`[TEST EMAIL ALERT] Voti inviati con successo da ${voterUserId} per l'evento ${eventId}. Notifica di completamento inviata a scarpariinside@gmail.com.`);
 
-        console.log(`[TEST EMAIL ALERT] V
+        return { success: true, message: "Voti inviati con successo." };
+    },
+};

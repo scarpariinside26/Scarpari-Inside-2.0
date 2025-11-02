@@ -1,63 +1,60 @@
 <script>
-// ... (script precedente)
-    // ... (omissis) ...
-    // ... (omissis) ...
-// ... (script precedente)
+    import TopNavBar from '$lib/components/TopNavBar.svelte';
+    import BottomNavBar from '$lib/components/BottomNavBar.svelte';
+    import { fade } from 'svelte/transition';
+    import { fly, slide } from 'svelte/transition';
+    import { quartOut } from 'svelte/easing';
+    import { goto } from '$app/navigation'; 
+    import { page } from '$app/stores';
+
+    /** @type {import('./$types').PageData} */
+    export let data;
+    
+    // Dati caricati dal server
+    const { liveEvent, teams, isAdmin, user } = data;
+    
+    // --- VARIABILI DI STATO ---
+    let showEditModal = false;
+    let isEventExpanded = false;
+    // La partita è considerata finita se l'evento è valido e la data è passata (gestito lato server)
+    let isMatchFinished = liveEvent && new Date(liveEvent.date) < new Date(); 
+    let unreadNotifications = 2; 
+    
+    const LOGO_SRC = "/Scarpari Inside simplelogo_2023.png"; 
+
+    // --- FUNZIONI INTERAZIONE UI ---
+    function openEditModal(event) { event.stopPropagation(); showEditModal = true; }
+    function closeEditModal() { showEditModal = false; }
+    function toggleEventExpansion() { isEventExpanded = !isEventExpanded; }
+    function handleAdminAction(action) { 
+        alert(`Azione amministrativa: ${action} per l'evento ${liveEvent.title}`); 
+        closeEditModal(); 
+        // In un'app reale: invia una richiesta POST al server per eseguire l'azione
+    }
+    function startVoting() { goto('/vote'); }
+    
+    // Funzioni per i nuovi pulsanti di cornice
+    function goToGeneralChat() { alert('Naviga alla Chat Generale.'); }
+    function showNotifications() { 
+        alert('Visualizza il dettaglio delle notifiche.'); 
+        unreadNotifications = 0; 
+    }
+
+    // Dati fittizi per la Modale (da sostituire con dati reali se necessario)
+    const availableLocations = ['Campo A', 'Campo B', 'Campo C', 'Stadio Comunale'];
 </script>
 
-<div class="app-container">
-    <TopNavBar />
-
-    <div class="logo-area">
-        <button class="logo-side-button placeholder" on:click={goToGeneralChat} title="Chat Generale">Chat</button>
-        <img src={LOGO_SRC} alt="Scarpa Inside Logo" class="main-logo"/>
-        <button class="logo-side-button placeholder" on:click={showNotifications} title="Notifiche">
-            🔔
-            {#if unreadNotifications > 0}
-                <div class="notification-badge">{unreadNotifications > 9 ? '9+' : unreadNotifications}</div>
-            {/if}
-        </button>
-    </div>
-
-    {#if isMatchFinished && $page.url.pathname === '/'}
-        <div class="voting-button-bottom-wrapper" transition:fly={{ y: -10, duration: 300 }}>
-            <button class="voting-button" on:click={startVoting}>
-                ⭐ VOTA I GIOCATORI DELLA PARTITA! ⭐
-            </button>
-        </div>
-    {/if}
-
-    <div class="dashboard-grid">
-
-        {#if liveEvent}
-            <div class="event-live-card-wrapper" class:expanded={isEventExpanded}>
-                <div class="event-summary" on:click={toggleEventExpansion} role="button" tabindex="0">
-                    <div class="card-content">
-                        </div>
-                    <span class="confirmation-status">{liveEvent.confirmed} / {liveEvent.total} Giocatori Assegnati!</span>
-                </div>
-                
-                {#if isEventExpanded}
-                    {/if}
-            </div>
-        {/if}
-
-        </div>
-    
-    <BottomNavBar />
-</div>
-
-{#if showEditModal && isAdmin}
-    <div 
-        class="edit-modal-backdrop" 
-        transition:fade={{ duration: 300 }} 
-        role="button" 
-        tabindex="0" 
-        on:click={closeEditModal} 
-        on:keydown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') closeEditModal(); }}
-    >
-        <div class="edit-modal-content panel" role="dialog" aria-modal="true" on:click|stopPropagation transition:fly={{ y: 50, duration: 400, easing: quartOut }}>
-            <button class="close-button" on:click={closeEditModal}>×</button>
-            </div>
-    </div>
-{/if}
+<style>
+    .app-container {
+        max-width: 450px;
+        margin: 0 auto;
+        min-height: 100vh;
+        color: var(--text-color);
+        padding: 0 16px;
+        padding-top: 70px; 
+        padding-bottom: 80px; 
+    }
+    .logo-area { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; margin-top: -15px; position: relative; }
+    .main-logo { height: 90px; width: auto; opacity: 0.95; }
+    .logo-side-button { background: var(--input-bg); color: var(--secondary-accent); border: none; padding: 10px 12px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: background 0.2s; white-space: nowrap; text-decoration: none; display: flex; align-items: center; justify-content: center; height: 40px; position: relative; }
+    .logo-area .placeholder { min-width: 40px;

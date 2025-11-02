@@ -8,9 +8,8 @@
     // --- VARIABILI DI STATO ---
     let showEditModal = false;
     let isEventExpanded = false;
-    
-    // Simula l'autenticazione dell'utente come Admin
-    const isAdmin = true; // Imposta su 'false' per nascondere il pulsante Modifica
+    const isAdmin = true; // Simula l'admin
+    const LOGO_SRC = "/Scarpari Inside simplelogo_2023.png"; 
 
     // --- DATI FITTIZI EVENTO LIVE COMPLETO ---
     const liveEvent = { 
@@ -24,7 +23,6 @@
         location: 'Campo A',
         locationLink: 'https://maps.app.goo.gl/campoa', 
         description: 'Partita regolare valida per la classifica di stagione. Presentarsi in loco 15 minuti prima per il riscaldamento.',
-        discordLink: 'https://discord.gg/partita-live-scarpari',
         teams: [
             // Squadra 1 (Rossa)
             { id: 1, name: 'Team Rosso', color: '#FF4136', players: [
@@ -94,15 +92,27 @@
         min-height: 100vh;
         color: var(--text-color);
         padding: 0 16px;
-        /* Padding top di 70px per la Top Bar */
-        padding-top: 70px; 
+        padding-top: 70px; /* Spazio per la Top Bar */
         padding-bottom: 80px; 
     }
+    
+    /* Nuovo Blocco Logo */
+    .logo-area {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 15px 0; /* Spazio verticale sopra la griglia */
+    }
+    .main-logo {
+        height: 60px; /* Logo più grande e impattante */
+        width: auto;
+        opacity: 0.95;
+    }
+
     .dashboard-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 15px;
-        margin-top: 5px; /* Rimosso titolo, riduciamo il margine */
     }
     .card {
         background: var(--panel-bg);
@@ -113,180 +123,41 @@
         overflow: hidden;
     }
     
+    /* ... (Stili Card Evento Live, Schede Squadre, Modale - INALTERATI) ... */
+
     /* Card Evento Live */
-    .event-live-card-wrapper {
-        grid-column: 1 / -1; 
-        transition: transform 0.2s;
-    }
-    .event-summary {
-        border-left: 5px solid var(--accent-color);
-        cursor: pointer;
-        padding: 10px 15px;
-        background: var(--panel-bg);
-        border-radius: 12px;
-        transition: border-radius 0.3s;
-    }
-    .event-live-card-wrapper.expanded .event-summary {
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
-    }
-    .card-content {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start; 
-    }
-    .card-title {
-        font-size: 1.1rem;
-        font-weight: 800;
-        color: var(--text-color-bright);
-        margin-bottom: 5px;
-    }
-    .card-text {
-        font-size: 0.85rem;
-        color: var(--secondary-accent);
-    }
-    .confirmation-status {
-        font-weight: 700;
-        color: var(--success-color);
-        margin-top: 5px;
-        display: block;
-    }
-
-    /* Controlli compatti */
-    .compact-controls {
-        display: flex;
-        gap: 8px;
-    }
-    .compact-controls > * {
-        text-decoration: none;
-        padding: 6px 10px;
-        border-radius: 6px;
-        font-size: 0.8rem;
-        font-weight: 700;
-        transition: background 0.2s;
-        cursor: pointer;
-    }
-    .discord-link-compact {
-        background: #7289da;
-        color: white;
-    }
-    .edit-button-compact {
-        background: var(--accent-color);
-        color: black;
-        border: none;
-    }
-
-    /* Dettagli Evento Espandibili */
-    .event-details-content {
-        padding: 15px;
-        padding-top: 10px;
-        background: var(--input-bg);
-        border-bottom-left-radius: 12px;
-        border-bottom-right-radius: 12px;
-    }
-    .detail-row {
-        margin-bottom: 10px;
-        font-size: 0.9rem;
-    }
-    .detail-row strong {
-        color: var(--text-color-bright);
-        margin-right: 5px;
-    }
-    .description-text {
-        margin-top: 10px;
-        padding-top: 10px;
-        border-top: 1px solid var(--panel-bg);
-        font-style: italic;
-    }
+    .event-live-card-wrapper { grid-column: 1 / -1; transition: transform 0.2s; }
+    .event-summary { border-left: 5px solid var(--accent-color); cursor: pointer; padding: 10px 15px; background: var(--panel-bg); border-radius: 12px; transition: border-radius 0.3s; }
+    .event-live-card-wrapper.expanded .event-summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+    .card-content { display: flex; justify-content: space-between; align-items: flex-start; }
+    .card-title { font-size: 1.1rem; font-weight: 800; color: var(--text-color-bright); margin-bottom: 5px; }
+    .card-text { font-size: 0.85rem; color: var(--secondary-accent); }
+    .confirmation-status { font-weight: 700; color: var(--success-color); margin-top: 5px; display: block; }
+    .compact-controls { display: flex; gap: 8px; }
+    .compact-controls > * { text-decoration: none; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; transition: background 0.2s; cursor: pointer; }
+    .discord-link-compact { background: #7289da; color: white; }
+    .edit-button-compact { background: var(--accent-color); color: black; border: none; }
+    .event-details-content { padding: 15px; padding-top: 10px; background: var(--input-bg); border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+    .detail-row { margin-bottom: 10px; font-size: 0.9rem; }
+    .detail-row strong { color: var(--text-color-bright); margin-right: 5px; }
+    .description-text { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--panel-bg); font-style: italic; }
 
     /* Schede Squadre Compattate e Allineate */
-    .team-card {
-        padding: 10px;
-    }
-    .team-name {
-        font-weight: 800;
-        font-size: 0.9rem;
-        color: var(--team-color);
-        margin-bottom: 5px;
-        text-align: center;
-        border-bottom: 2px solid var(--team-color);
-        padding-bottom: 3px;
-    }
-    .team-players-list {
-        font-size: 0.75rem;
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-    .player-entry {
-        display: flex;
-        justify-content: space-between;
-        line-height: 1.5;
-    }
-    .player-entry-meta {
-        color: var(--secondary-accent);
-        font-weight: 500;
-        margin-right: 5px;
-    }
-    .player-entry-rating {
-        font-weight: 700;
-        color: var(--success-color);
-    }
-
+    .team-card { padding: 10px; }
+    .team-name { font-weight: 800; font-size: 0.9rem; color: var(--team-color); margin-bottom: 5px; text-align: center; border-bottom: 2px solid var(--team-color); padding-bottom: 3px; }
+    .team-players-list { font-size: 0.75rem; list-style: none; padding: 0; margin: 0; }
+    .player-entry { display: flex; justify-content: space-between; line-height: 1.5; }
+    .player-entry-meta { color: var(--secondary-accent); font-weight: 500; margin-right: 5px; }
+    .player-entry-rating { font-weight: 700; color: var(--success-color); }
+    
     /* Modale di Modifica (Nuova) */
-    .edit-modal-backdrop {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 2000;
-    }
-    .edit-modal-content {
-        background: var(--bg-color);
-        border-radius: 15px;
-        width: 90%;
-        max-width: 400px;
-        padding: 20px;
-        z-index: 2001;
-    }
-    .edit-modal-content h3 {
-        margin-top: 0;
-        color: var(--accent-color);
-        border-bottom: 1px solid var(--panel-bg);
-        padding-bottom: 10px;
-        margin-bottom: 20px;
-    }
-    .form-group {
-        margin-bottom: 15px;
-    }
-    .form-group label {
-        display: block;
-        margin-bottom: 5px;
-        font-weight: 600;
-    }
-    .form-group input, .form-group select, .form-group textarea {
-        width: 100%;
-        padding: 10px;
-        border-radius: 8px;
-        border: 1px solid var(--panel-bg);
-        background: var(--input-bg);
-        color: var(--text-color);
-        box-sizing: border-box;
-    }
-    .action-button {
-        width: 100%;
-        padding: 12px;
-        border: none;
-        border-radius: 8px;
-        font-weight: 700;
-        cursor: pointer;
-        margin-top: 10px;
-    }
+    .edit-modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+    .edit-modal-content { background: var(--bg-color); border-radius: 15px; width: 90%; max-width: 400px; padding: 20px; z-index: 2001; }
+    .edit-modal-content h3 { margin-top: 0; color: var(--accent-color); border-bottom: 1px solid var(--panel-bg); padding-bottom: 10px; margin-bottom: 20px; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--panel-bg); background: var(--input-bg); color: var(--text-color); box-sizing: border-box; }
+    .action-button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; margin-top: 10px; }
     .save-button { background: var(--success-color); color: black; }
     .cancel-button { background: var(--warning-color); color: black; }
     .delete-button { background: var(--error-color); color: white; margin-top: 20px; }
@@ -299,6 +170,10 @@
 
 <div class="app-container">
     <TopNavBar />
+
+    <div class="logo-area">
+        <img src={LOGO_SRC} alt="Scarpa Inside Logo" class="main-logo"/>
+    </div>
 
     <div class="dashboard-grid">
 

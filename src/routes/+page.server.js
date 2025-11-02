@@ -2,7 +2,7 @@
 import { redirect } from '@sveltejs/kit';
 
 // ⚠️ SOSTITUISCI CON L'EMAIL VERA DI DENIS FURIATO
-const ADMIN_EMAIL = 'denis.furiato@example.com'; 
+const ADMIN_EMAIL = 'denis.furiato@gmail.com'; 
 
 /** @type {import('./$types').PageServerLoad} */
 export async function load({ locals }) {

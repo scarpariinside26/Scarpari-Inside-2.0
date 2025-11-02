@@ -1,9 +1,19 @@
 <script>
     import { page } from '$app/stores';
+    
+    // Nome del file logo fornito
+    const LOGO_SRC = "/Scarpari Inside simplelogo_2023.png"; 
+    
+    function navigate(path) {
+        alert(`Vai alla sezione: ${path}`);
+        // In un'app reale: goto(path);
+    }
 </script>
 
 <style>
-    /* Altezza Fissa per la Top Bar (uguale alla Bottom NavBar: 70px) */
+    /* ------------------------------------- */
+    /* Stili Top Nav Bar (Contenitore) */
+    /* ------------------------------------- */
     .top-nav-bar {
         position: fixed;
         top: 0;
@@ -23,30 +33,28 @@
         border-bottom-right-radius: 20px;
     }
     
-    /* Contenitore per il pulsante Indietro */
-    .left-content {
-        width: 40px; /* Larghezza fissa per il pulsante/spacer */
+    /* Contenitori per l'allineamento degli elementi */
+    .side-group {
         display: flex;
-        justify-content: flex-start;
         align-items: center;
+        gap: 8px; /* Spazio tra i pulsanti/icone */
     }
 
-    /* Stile per il Contenitore del Logo Immagine (Ora al centro assoluto) */
-    .app-logo-container {
-        position: absolute; 
-        left: 50%;
-        transform: translateX(-50%);
-        /* Aggiustiamo un po' la larghezza massima per evitare che venga coperto dai pulsanti */
-        max-width: calc(100% - 100px); /* 100% - (40px sinistro + 40px destro + padding) */
-        height: 100%; /* Occupa l'intera altezza della navbar */
-        display: flex;
-        justify-content: center;
-        align-items: center;
+    /* Stile per i pulsanti compatti di servizio */
+    .service-button {
+        background: var(--input-bg);
+        color: var(--secondary-accent);
+        border: none;
+        padding: 6px 10px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: background 0.2s;
     }
-    .app-logo {
-        height: 50px; /* Altezza massima per il logo */
-        width: auto; /* Mantieni le proporzioni */
-        object-fit: contain; /* Assicurati che l'intera immagine sia visibile */
+    .service-button:hover {
+        background: var(--bg-color);
+        color: var(--text-color);
     }
 
     /* Stile per il pulsante Indietro */
@@ -61,36 +69,91 @@
         font-size: 1rem;
         font-weight: 600;
         transition: color 0.2s;
-        height: 40px;
-        width: 40px;
+        height: 30px;
+        width: 30px;
         justify-content: center;
     }
     .back-button:hover {
         color: var(--text-color);
     }
     
-    /* Spacer vuoto a destra */
-    .right-spacer {
-        width: 40px; 
+    /* ------------------------------------- */
+    /* Stili Logo Centrale Rialzato (Uguale alla Bottom Bar) */
+    /* ------------------------------------- */
+    .center-logo-container {
+        position: absolute; /* Rimuove dal flusso normale */
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px; 
+        height: 70px; /* Altezza della navbar */
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        pointer-events: none; /* Permette i click sugli elementi sottostanti */
     }
+    .center-logo-button {
+        position: absolute;
+        bottom: -25px; 
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: var(--bg-color); 
+        border: 4px solid var(--panel-bg); 
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: transform 0.2s;
+        z-index: 501; 
+        pointer-events: auto; /* Riacquisisce gli eventi per il pulsante */
+    }
+    .center-logo-button:hover {
+        transform: scale(1.05);
+    }
+
+    .app-logo {
+        height: 40px; 
+        width: auto;
+    }
+
 </style>
 
 <div class="top-nav-bar">
-    <div class="left-content">
+    <div class="side-group">
         {#if $page.url.pathname !== '/'}
             <button class="back-button" on:click={() => window.history.back()} aria-label="Torna indietro">
                 ⬅️
             </button>
         {:else}
-            <div class="spacer" style="width: 40px;"></div>
+            <button class="service-button" on:click={() => navigate('/posts')}>
+                📝 POST
+            </button>
         {/if}
+        
+        <button class="service-button" on:click={() => navigate('/polls')}>
+            📊 SONDAGGI
+        </button>
     </div>
 
-    <div class="app-logo-container">
-        <img src="/logo.png" alt="Scarpa Inside Logo" class="app-logo"/>
+    <div class="center-logo-container">
+        <div 
+            class="center-logo-button" 
+            on:click={() => window.location.href = '/'} 
+            aria-label="Vai alla Homepage"
+        >
+            <img src={LOGO_SRC} alt="Logo Scarpa Inside" class="app-logo"/>
+        </div>
     </div>
     
-    <div class="right-spacer"></div>
+    <div class="side-group">
+        <button class="service-button" on:click={() => navigate('/payments')}>
+            💰 PAGAMENTI
+        </button>
+        <button class="service-button" on:click={() => navigate('/notifications')} style="padding: 6px 8px; font-size: 1rem;">
+            🔔
+        </button>
+    </div>
 </div>
 
 <div style="height: 70px;"></div>

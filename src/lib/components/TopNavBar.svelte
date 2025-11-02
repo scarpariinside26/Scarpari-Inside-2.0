@@ -3,6 +3,7 @@
     
     // Stato fittizio per le notifiche
     let unreadNotifications = 2;
+    const DISCORD_LINK = "https://discord.gg/tuo-server-generico"; // Sostituisci con il link Discord reale
 
     function navigate(path) {
         alert(`Vai alla sezione: ${path}`);
@@ -82,23 +83,59 @@
         color: var(--text-color);
     }
 
-    /* Campana Notifiche Centrale (Ora l'unico elemento al centro della barra) */
-    .center-notification-area {
-        position: absolute;
+    /* ------------------------------------- */
+    /* Discord Centrale Rialzato (Come il +) */
+    /* ------------------------------------- */
+    .center-button-container {
+        position: absolute; 
         left: 50%;
         transform: translateX(-50%);
+        width: 60px;
+        height: 70px; 
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        pointer-events: none; /* Permette i click sugli elementi sottostanti */
+    }
+    .center-discord-button {
+        position: absolute;
+        bottom: -25px; /* Sposta sotto la barra */
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: #7289da; /* Colore Discord */
+        color: white;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        border: 4px solid var(--panel-bg); 
+        cursor: pointer;
+        transition: transform 0.2s;
+        z-index: 501; 
+        pointer-events: auto; /* Riacquisisce gli eventi per il pulsante */
+    }
+    .center-discord-button:hover {
+        transform: scale(1.05);
+    }
+    
+    /* Campana Notifiche (Spostata a destra) */
+    .notification-area {
+        position: relative;
         cursor: pointer;
         color: var(--secondary-accent);
         transition: color 0.2s;
-        font-size: 1.8rem; /* Più grande per occupare il centro */
+        font-size: 1.5rem;
+        padding: 5px;
     }
-    .center-notification-area:hover {
+    .notification-area:hover {
         color: var(--accent-color);
     }
     .notification-badge {
         position: absolute;
-        top: 15px; /* Sposta il badge in alto a destra della campana */
-        right: -8px; 
+        top: 0px; 
+        right: 0px; 
         background: var(--error-color);
         color: white;
         border-radius: 50%;
@@ -132,13 +169,10 @@
         </button>
     </div>
 
-    <div class="center-notification-area" on:click={showNotifications}>
-        🔔
-        {#if unreadNotifications > 0}
-            <div class="notification-badge">
-                {unreadNotifications > 9 ? '9+' : unreadNotifications}
-            </div>
-        {/if}
+    <div class="center-button-container">
+        <a href={DISCORD_LINK} target="_blank" class="center-discord-button" aria-label="Chat Discord Generale">
+            💬
+        </a>
     </div>
     
     <div class="side-group">
@@ -146,9 +180,14 @@
             💰 PAGAMENTI
         </button>
         
-        <button class="service-button" on:click={() => navigate('/settings')} style="padding: 6px 8px; font-size: 1rem;">
-            ⚙️
-        </button>
+        <div class="notification-area" on:click={showNotifications}>
+            🔔
+            {#if unreadNotifications > 0}
+                <div class="notification-badge">
+                    {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                </div>
+            {/if}
+        </div>
     </div>
 </div>
 

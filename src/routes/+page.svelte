@@ -1,7 +1,6 @@
 <script>
     import TopNavBar from '$lib/components/TopNavBar.svelte';
     import BottomNavBar from '$lib/components/BottomNavBar.svelte';
-    import { eventStore } from '$lib/stores/eventStore.js'; 
     import { fade } from 'svelte/transition';
     import { fly, slide } from 'svelte/transition';
     import { quartOut } from 'svelte/easing';
@@ -23,7 +22,7 @@
         confirmed: 16, 
         total: 16, 
         location: 'Campo A',
-        locationLink: 'https://maps.app.goo.gl/campoa', // Link Maps fittizio
+        locationLink: 'https://maps.app.goo.gl/campoa', 
         description: 'Partita regolare valida per la classifica di stagione. Presentarsi in loco 15 minuti prima per il riscaldamento.',
         discordLink: 'https://discord.gg/partita-live-scarpari',
         teams: [
@@ -61,18 +60,15 @@
     // --- DATI FITTIZI PER SELECT (MODALE) ---
     const availableLocations = ['Campo A', 'Campo B', 'Campo C', 'Stadio Comunale'];
     const availableDurations = [60, 90, 120];
-    // Generazione orari fittizi (ogni 30 minuti)
     const availableTimes = Array.from({ length: 10 }, (_, i) => {
         const hour = 18 + Math.floor(i / 2);
         const minute = (i % 2) * 30;
         return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
     });
 
-    /**
-     * Funzione per aprire/chiudere la Modale di Modifica Evento
-     */
+    /** Funzione per aprire/chiudere la Modale di Modifica Evento */
     function openEditModal(event) {
-        event.stopPropagation(); // Evita l'espansione della card
+        event.stopPropagation();
         showEditModal = true;
     }
     
@@ -80,9 +76,7 @@
         showEditModal = false;
     }
     
-    /**
-     * Funzione per espandere/collassare la card evento
-     */
+    /** Funzione per espandere/collassare la card evento */
     function toggleEventExpansion() {
         isEventExpanded = !isEventExpanded;
     }
@@ -100,13 +94,15 @@
         min-height: 100vh;
         color: var(--text-color);
         padding: 0 16px;
+        /* Padding top di 70px per la Top Bar */
+        padding-top: 70px; 
         padding-bottom: 80px; 
     }
     .dashboard-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 15px;
-        margin-top: 20px;
+        margin-top: 5px; /* Rimosso titolo, riduciamo il margine */
     }
     .card {
         background: var(--panel-bg);
@@ -114,16 +110,14 @@
         padding: 15px;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
         text-align: left;
-        overflow: hidden; /* Importante per la transizione slide */
+        overflow: hidden;
     }
     
-    /* Card Evento Live (Contenitore) */
+    /* Card Evento Live */
     .event-live-card-wrapper {
         grid-column: 1 / -1; 
         transition: transform 0.2s;
     }
-    
-    /* Sommario Evento (Sempre Visibile) */
     .event-summary {
         border-left: 5px solid var(--accent-color);
         cursor: pointer;
@@ -139,7 +133,7 @@
     .card-content {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start; /* Allinea in alto per dare spazio al bottone */
+        align-items: flex-start; 
     }
     .card-title {
         font-size: 1.1rem;
@@ -176,16 +170,10 @@
         background: #7289da;
         color: white;
     }
-    .discord-link-compact:hover {
-        background: #677bc4;
-    }
     .edit-button-compact {
         background: var(--accent-color);
         color: black;
         border: none;
-    }
-    .edit-button-compact:hover {
-        background: var(--accent-color-glow);
     }
 
     /* Dettagli Evento Espandibili */
@@ -211,7 +199,7 @@
         font-style: italic;
     }
 
-    /* --- Schede Squadre Compattate e Allineate --- */
+    /* Schede Squadre Compattate e Allineate */
     .team-card {
         padding: 10px;
     }
@@ -245,7 +233,7 @@
         color: var(--success-color);
     }
 
-    /* --- Modale di Modifica (Nuova) --- */
+    /* Modale di Modifica (Nuova) */
     .edit-modal-backdrop {
         position: fixed;
         top: 0;
@@ -288,7 +276,7 @@
         border: 1px solid var(--panel-bg);
         background: var(--input-bg);
         color: var(--text-color);
-        box-sizing: border-box; /* Assicura che padding e border siano inclusi nella larghezza */
+        box-sizing: border-box;
     }
     .action-button {
         width: 100%;
@@ -311,8 +299,6 @@
 
 <div class="app-container">
     <TopNavBar />
-
-    <h1 class="page-title">Dashboard</h1>
 
     <div class="dashboard-grid">
 
@@ -378,7 +364,7 @@
 {#if showEditModal}
     <div class="edit-modal-backdrop" transition:fade={{ duration: 300 }} on:click={closeEditModal}>
         <div class="edit-modal-content panel" role="dialog" aria-modal="true" on:click|stopPropagation transition:fly={{ y: 50, duration: 400, easing: quartOut }}>
-            <button class="close-button" on:click={closeEditModal}>&times;</button>
+            <button class="close-button" on:click={closeEditModal}>×</button>
             <h3>Modifica: {liveEvent.title}</h3>
             
             <div class="form-group">

@@ -9,8 +9,8 @@
     // --- VARIABILI DI STATO ---
     let showEditModal = false;
     let isEventExpanded = false;
-    let isMatchFinished = true; 
-    let unreadNotifications = 2; // Stato per la campana notifiche laterale
+    let isMatchFinished = true; // Imposta su TRUE per mostrare il pulsante Vota
+    let unreadNotifications = 2; 
     
     const isAdmin = true; 
     const LOGO_SRC = "/Scarpari Inside simplelogo_2023.png"; 
@@ -29,23 +29,45 @@
         description: 'Partita regolare valida per la classifica di stagione. Presentarsi in loco 15 minuti prima per il riscaldamento.',
         discordLink: 'https://discord.gg/partita-live-scarpari',
         teams: [
-            // ... (teams come prima) ...
-             { id: 1, name: 'Team Rosso', color: '#FF4136', players: [
+            // Squadra 1 (Rossa)
+            { id: 1, name: 'Team Rosso', color: '#FF4136', players: [
                 { name: 'Mario Rossi', role: 'Att', rating: 8.5 },
                 { name: 'Giulio Neri', role: 'Cen', rating: 6.9 },
                 { name: 'Marco Bianchi', role: 'Por', rating: 9.0 },
                 { name: 'Paolo Gialli', role: 'Att', rating: 7.8 },
             ]},
+            // Squadra 2 (Blu)
             { id: 2, name: 'Team Blu', color: '#0074D9', players: [
                 { name: 'Andrea Blu', role: 'Att', rating: 7.5 },
                 { name: 'Simone Azzurro', role: 'Dif', rating: 8.0 },
                 { name: 'Davide Marino', role: 'Cen', rating: 7.1 },
                 { name: 'Pietro Oceano', role: 'Por', rating: 7.9 },
+            ]},
+            // Squadra 3 (Verde)
+            { id: 3, name: 'Team Verde', color: '#2ECC40', players: [
+                { name: 'Elena Verdi', role: 'Dif', rating: 6.5 },
+                { name: 'Franco Bruno', role: 'Att', rating: 7.0 },
+                { name: 'Laura Rosa', role: 'Cen', rating: 8.1 },
+                { name: 'Nicola Viola', role: 'Dif', rating: 7.3 },
+            ]},
+            // Squadra 4 (Gialla)
+            { id: 4, name: 'Team Giallo', color: '#FFDC00', players: [
+                { name: 'Oscar Argento', role: 'Att', rating: 8.8 },
+                { name: 'Sara Bronzo', role: 'Dif', rating: 6.9 },
+                { name: 'Tobia Nero', role: 'Cen', rating: 7.7 },
+                { name: 'Ugo Oro', role: 'Dif', rating: 7.4 },
             ]}
         ]
     };
 
-    // ... (Dati Fittizi Modale inalterati) ...
+    // --- Dati Fittizi per Modale (omessi per brevità) ---
+    const availableLocations = ['Campo A', 'Campo B', 'Campo C', 'Stadio Comunale'];
+    const availableDurations = [60, 90, 120];
+    const availableTimes = Array.from({ length: 10 }, (_, i) => {
+        const hour = 18 + Math.floor(i / 2);
+        const minute = (i % 2) * 30;
+        return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    });
 
     function openEditModal(event) { event.stopPropagation(); showEditModal = true; }
     function closeEditModal() { showEditModal = false; }
@@ -53,17 +75,15 @@
     function handleAdminAction(action) { alert(`Azione amministrativa: ${action} per l'evento ${liveEvent.title}`); closeEditModal(); }
     function startVoting() { goto('/vote'); }
     
-    // Funzioni per i nuovi pulsanti di cornice
     function goToGeneralChat() { alert('Naviga alla Chat Generale.'); }
     function showNotifications() { 
         alert('Visualizza il dettaglio delle notifiche.'); 
-        unreadNotifications = 0; // Azzera il badge
+        unreadNotifications = 0; 
     }
 
 </script>
 
 <style>
-    /* ... (Stili base app-container) ... */
     .app-container {
         max-width: 450px;
         margin: 0 auto;
@@ -74,7 +94,7 @@
         padding-bottom: 80px; 
     }
     
-    /* Blocco Logo/Cornice (Contiene Chat, Logo e Notifiche) */
+    /* Blocco Logo/Cornice */
     .logo-area {
         display: flex;
         justify-content: space-between; 
@@ -88,8 +108,6 @@
         width: auto;
         opacity: 0.95;
     }
-    
-    /* Stili per i pulsanti laterali */
     .logo-side-button {
         background: var(--input-bg);
         color: var(--secondary-accent);
@@ -106,20 +124,16 @@
         align-items: center;
         justify-content: center;
         height: 40px; 
-        position: relative; /* Per il badge notifiche */
+        position: relative;
     }
     .logo-side-button:hover {
         background: var(--bg-color);
         color: var(--text-color);
     }
-    
-    /* Spaziatori per bilanciare la griglia (opzionale, ma aiuta) */
     .logo-area .placeholder {
         min-width: 40px; 
         flex-shrink: 0;
     }
-
-    /* Badge Notifiche */
     .notification-badge {
         position: absolute;
         top: -5px; 
@@ -138,19 +152,36 @@
         transform: scale(0.9);
     }
 
-    /* ... (Il resto degli stili rimane inalterato: dashboard-grid, voting-button, compact-controls, etc.) ... */
+    /* Griglia Dashboard (Contiene Card Evento e 4 Squadre) */
     .dashboard-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 1fr; /* Le 4 card delle squadre si allineano correttamente qui */
         gap: 15px;
     }
+    .card {
+        background: var(--panel-bg);
+        border-radius: 12px;
+        padding: 15px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        text-align: left;
+        overflow: hidden;
+    }
+    
+    /* Votazioni Pulsante - Contenitore per centratura al fondo */
+    .voting-button-bottom-wrapper {
+        width: 100%;
+        margin-top: 25px; /* Spazio dopo le card delle squadre */
+        display: flex;
+        justify-content: center; /* Centra il pulsante all'interno */
+        padding-bottom: 5px;
+    }
     .voting-button {
-        grid-column: 1 / -1; 
+        /* Stile per pulsante sottile e centrato */
         background: var(--warning-color);
         color: black;
         font-weight: 700;
         font-size: 0.9rem;
-        padding: 5px 10px;
+        padding: 5px 15px;
         height: 25px; 
         display: flex;
         align-items: center;
@@ -160,10 +191,32 @@
         cursor: pointer;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
         transition: background 0.2s;
-        margin-top: 5px;
-        margin-bottom: 10px;
+        /* Limita la larghezza per renderlo più snello */
+        max-width: 300px; 
+        width: 100%;
     }
-    /* ... (Omesso il resto degli stili per brevità) ... */
+    .voting-button:hover {
+        background: var(--warning-color-dark);
+    }
+    
+    /* Stili Card Evento (non modificati) */
+    .event-live-card-wrapper { grid-column: 1 / -1; transition: transform 0.2s; }
+    .event-summary { border-left: 5px solid var(--accent-color); cursor: pointer; padding: 10px 15px; background: var(--panel-bg); border-radius: 12px; transition: border-radius 0.3s; }
+    .event-live-card-wrapper.expanded .event-summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+    .card-content { display: flex; justify-content: space-between; align-items: flex-start; }
+    .card-title { font-size: 1.1rem; font-weight: 800; color: var(--text-color-bright); margin-bottom: 5px; }
+    .card-text { font-size: 0.85rem; color: var(--secondary-accent); }
+    .confirmation-status { font-weight: 700; color: var(--success-color); margin-top: 5px; display: block; }
+    .compact-controls { display: flex; flex-direction: column; gap: 5px; }
+    .compact-controls a, .compact-controls button { text-decoration: none; padding: 8px; width: 35px; height: 35px; border-radius: 6px; font-size: 0.9rem; font-weight: 700; transition: background 0.2s; cursor: pointer; display: flex; justify-content: center; align-items: center; }
+    .discord-link-compact { background: #7289da; color: white; }
+    .edit-button-compact { background: var(--accent-color); color: black; border: none; }
+    .team-name { font-weight: 800; font-size: 0.9rem; color: var(--team-color); margin-bottom: 5px; text-align: center; border-bottom: 2px solid var(--team-color); padding-bottom: 3px; }
+    .team-players-list { font-size: 0.75rem; list-style: none; padding: 0; margin: 0; }
+    .player-entry { display: flex; justify-content: space-between; line-height: 1.5; }
+    .player-entry-rating { font-weight: 700; color: var(--success-color); }
+    
+    /* Stili Modale (omessi per brevità) */
 </style>
 
 <svelte:head>
@@ -189,12 +242,6 @@
             {/if}
         </button>
     </div>
-
-    {#if isMatchFinished}
-        <button class="voting-button" on:click={startVoting}>
-            ⭐ VOTA I GIOCATORI DELLA PARTITA! ⭐
-        </button>
-    {/if}
 
     <div class="dashboard-grid">
 
@@ -252,7 +299,15 @@
         {/each}
         
     </div>
-    
+
+    {#if isMatchFinished}
+        <div class="voting-button-bottom-wrapper" transition:fly={{ y: -10, duration: 300 }}>
+            <button class="voting-button" on:click={startVoting}>
+                ⭐ VOTA I GIOCATORI DELLA PARTITA! ⭐
+            </button>
+        </div>
+    {/if}
+
     <BottomNavBar />
 </div>
 
@@ -261,6 +316,16 @@
         <div class="edit-modal-content panel" role="dialog" aria-modal="true" on:click|stopPropagation transition:fly={{ y: 50, duration: 400, easing: quartOut }}>
             <button class="close-button" on:click={closeEditModal}>×</button>
             <h3>Modifica: {liveEvent.title}</h3>
+            
+            <div class="form-group">
+                <label for="event-location">Luogo</label>
+                <select id="event-location">
+                    <option value={liveEvent.location}>{liveEvent.location}</option>
+                    {#each availableLocations.filter(loc => loc !== liveEvent.location) as loc}
+                        <option value={loc}>{loc}</option>
+                    {/each}
+                </select>
+            </div>
             
             <button class="action-button save-button" on:click={() => handleAdminAction('Salva Modifiche Evento')}>
                 💾 SALVA MODIFICHE

@@ -4,7 +4,7 @@
     import { page } from '$app/stores';
     import { getContext } from 'svelte';
     
-    // Ottieni il client Supabase dal contesto (impostato in hooks.server.js)
+    // Ottieni il client Supabase dal contesto (impostato in hooks.client.js)
     const supabase = getContext('supabase');
 
     // URL della pagina a cui reindirizzare dopo l'accesso
@@ -68,7 +68,6 @@
             socialLayout="horizontal"
             theme="dark"
             
-            // Personalizza le etichette per l'italiano
             i18n={{
                 en: {
                     sign_in_title: 'Accedi al tuo Profilo',

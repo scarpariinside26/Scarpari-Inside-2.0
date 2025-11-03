@@ -1,39 +1,36 @@
 <script>
     import { goto } from '$app/navigation';
-    import { getContext } from 'svelte'; // onMount non è più necessario qui
+    import { getContext } from 'svelte';
     import { quartOut } from 'svelte/easing';
     import { fly } from 'svelte/transition';
 
-    // DICHIARAZIONE E ASSEGNAZIONE
-    // getContext DEVE essere chiamato durante l'inizializzazione del componente.
-    let supabase; 
-    try {
-        supabase = getContext('supabase'); 
-    } catch (e) {
-        // Cattura l'errore se getContext non può essere chiamato (es. non c'è setContext in un genitore)
-        console.error("ATTENZIONE: Fallimento nell'inizializzazione di 'supabase' dal contesto.", e.message);
-        // La variabile supabase rimane undefined o null, che verrà gestito dal controllo nel markup.
-    }
+    // Inizializzazione del client Supabase al top-level (corretto)
+    let supabase;
+    let errorContext = false;
     
-    // DEBUG: Se supabase è nullo dopo l'inizializzazione, questo log viene eseguito subito.
-    if (!supabase) {
-         console.warn("WARN: Il client Supabase non è stato trovato o inizializzato.");
+    try {
+        supabase = getContext('supabase');
+    } catch (e) {
+        errorContext = true;
+        console.error("ERRORE: Impossibile trovare 'supabase' nel contesto. Assicurati che +layout.svelte e +layout.js siano configurati.");
     }
 
     let email = '';
     let password = '';
     let errorMessage = '';
+    let successMessage = '';
     let loading = false;
+    let showReset = false; // Nuovo stato per mostrare il link di reset
 
-    // Gestisce il submit del form (Email/Password)
+    /** Gestisce il login standard con email e password */
     async function handleLogin() {
-        // PRIMO CONTROLLO: Se supabase non è ancora definito, ferma l'esecuzione.
         if (!supabase) {
-            errorMessage = "Errore di sistema: servizio di autenticazione non ancora disponibile.";
+            errorMessage = "Errore di sistema: client di autenticazione non disponibile.";
             return;
         }
 
         errorMessage = '';
+        successMessage = '';
         loading = true;
 
         const { error } = await supabase.auth.signInWithPassword({
@@ -45,26 +42,30 @@
         
         if (error) {
             errorMessage = error.message;
+            // Se c'è un errore, mostriamo l'opzione per il reset della password
+            showReset = true; 
         } else {
+            // Successo: reindirizza
             await goto('/', { replaceState: true });
         }
     }
 
-    // Gestisce il login tramite Google
+    /** Gestisce il login tramite Google */
     async function handleGoogleLogin() {
-        // PRIMO CONTROLLO: Se supabase non è ancora definito, ferma l'esecuzione.
         if (!supabase) {
-            errorMessage = "Errore di sistema: servizio di autenticazione non ancora disponibile.";
+            errorMessage = "Errore di sistema: client di autenticazione non disponibile.";
             return;
         }
 
         errorMessage = '';
+        successMessage = '';
         loading = true;
 
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: `${window.location.origin}/auth/callback`
+                // IMPORTANT: Modifica l'URL di reindirizzamento se necessario per la tua app
+                redirectTo: `${window.location.origin}/auth/callback` 
             }
         });
 
@@ -75,72 +76,114 @@
         }
     }
 
-    function handleForgotPassword() {
-        goto('/forgot-password');
+    /** Gestisce la richiesta di reset della password */
+    async function handleForgotPassword() {
+        if (!supabase) {
+            errorMessage = "Errore di sistema: client di autenticazione non disponibile.";
+            return;
+        }
+
+        // Deve essere fornita una email valida per il reset
+        if (!email) {
+            errorMessage = "Inserisci la tua email per richiedere il reset della password.";
+            return;
+        }
+
+        loading = true;
+        errorMessage = '';
+        successMessage = '';
+
+        // Invia l'email per il reset
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            // IMPORTANT: Modifica l'URL dove l'utente verrà reindirizzato per impostare la nuova password
+            redirectTo: `${window.location.origin}/auth/update-password` 
+        });
+
+        loading = false;
+
+        if (error) {
+            errorMessage = error.message;
+        } else {
+            successMessage = `Link di reset inviato a ${email}. Controlla la tua casella di posta!`;
+            showReset = false; // Nascondi il link dopo l'invio
+        }
     }
 </script>
 
-<div class="login-container" transition:fly={{ y: 50, duration: 400, easing: quartOut }}>
-    <div class="login-panel">
+<!-- LAYOUT PRINCIPALE -->
+<div class="login-container" in:fly={{ y: -50, duration: 500, easing: quartOut }}>
+    <div class="login-card">
         <h1>Accedi</h1>
 
-        <!-- Disabilita il pulsante se supabase non è ancora pronto -->
-        <button on:click={handleGoogleLogin} class="social-login-button google-button" disabled={loading || !supabase}>
-            {#if loading}
-                Caricamento...
-            {:else}
-                <svg viewBox="0 0 48 48" class="google-icon"><path fill="#FFC107" d="M43.61 20.08c0-.68-.06-1.35-.18-2.01H24v3.8h11.75c-.52 2.15-1.97 3.99-4.21 5.25v3.31h4.29c2.51-2.3 4.07-5.74 4.07-9.75z"/><path fill="#FF3D00" d="M24 44c5.29 0 9.77-1.76 13.03-4.78l-4.29-3.31c-2.37 1.58-5.4 2.51-8.74 2.51-6.66 0-12.33-4.48-14.33-10.43H5.3v3.31C8.82 39.46 15.93 44 24 44z"/><path fill="#4CAF50" d="M9.67 24c-.21-1.04-.33-2.12-.33-3.23s.12-2.19.33-3.23V14.23H5.3C4.54 16.53 4 19.16 4 21.99s.54 5.46 1.3 7.76l4.37-3.31z"/><path fill="#1976D2" d="M24 8c3.55 0 6.78 1.22 9.32 3.59l3.73-3.6C33.77 4.56 29.29 4 24 4c-8.07 0-15.18 4.54-18.7 11.23l4.37 3.31C11.67 12.48 17.34 8 24 8z"/></svg>
-                Accedi con Google
-            {/if}
-        </button>
+        {#if errorContext}
+             <p class="error-message">⚠️ Errore di inizializzazione. Controlla la console per i dettagli.</p>
+        {/if}
 
-        <div class="divider">o</div>
-
+        <!-- FORM DI LOGIN (EMAIL/PASSWORD) -->
         <form on:submit|preventDefault={handleLogin}>
             <div class="form-group">
                 <label for="email">Email</label>
-                <input type="email" id="email" bind:value={email} required disabled={loading || !supabase} />
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" bind:value={password} required disabled={loading || !supabase} />
+                <input type="email" id="email" bind:value={email} required disabled={loading}>
             </div>
 
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" bind:value={password} required disabled={loading}>
+            </div>
+
+            <!-- MESSAGGI DI STATO -->
             {#if errorMessage}
-                <p class="error">{errorMessage}</p>
+                <p class="error-message">{errorMessage}</p>
             {/if}
-            
-            <!-- Disabilita il pulsante se supabase non è ancora pronto -->
-            <button type="submit" class="login-button" disabled={loading || !supabase}>
+
+            {#if successMessage}
+                <p class="success-message">{successMessage}</p>
+            {/if}
+
+            <!-- PULSANTE DI LOGIN -->
+            <button type="submit" class="action-button login-button" disabled={loading}>
                 {#if loading}
-                    Accesso in corso...
+                    Caricamento...
                 {:else}
                     Accedi
                 {/if}
             </button>
         </form>
         
-        <p class="help-links">
-            <a href="/forgot-password" on:click|preventDefault={handleForgotPassword}>Password dimenticata?</a>
-        </p>
-        <p class="help-links">
-            Non hai un account? <a href="/signup">Registrati ora</a>
-        </p>
+        <!-- OPZIONE PASSWORD DIMENTICATA -->
+        {#if showReset}
+            <div class="reset-link">
+                <button on:click={handleForgotPassword} disabled={loading} class="text-button">
+                    Password dimenticata?
+                </button>
+            </div>
+        {/if}
+
+        <!-- SEPARATORE E OPZIONI SOCIAL -->
+        <div class="separator">
+            <span class="line"></span>
+            <span>o</span>
+            <span class="line"></span>
+        </div>
+
+        <button on:click={handleGoogleLogin} disabled={loading} class="action-button google-button">
+            <!-- Icona Google (sostituire con icona reale se possibile) -->
+            Accedi con Google
+        </button>
     </div>
 </div>
 
 <style>
-    /* Stili CSS */
+    /* Variabili CSS (Assumi che siano definite altrove o usale come fallback) */
     :root {
-        --panel-bg: #2c3e50; /* Blu scuro */
-        --accent-color: #3498db; /* Blu vivo */
-        --input-bg: #34495e; /* Blu-grigio scuro */
-        --input-border: #4d6175;
-        --text-color: #ecf0f1; /* Bianco-grigio chiaro */
-        --text-color-bright: #ffffff;
-        --error-color: #e74c3c; /* Rosso */
-        --success-color: #2ecc71; /* Verde */
+        --bg-color: #f7f9fb;
+        --card-bg: #ffffff;
+        --text-color: #333;
+        --accent-color: #007bff;
+        --error-color: #e74c3c;
+        --success-color: #2ecc71;
+        --google-color: #4285f4;
+        --input-border: #ccc;
     }
 
     .login-container {
@@ -148,149 +191,141 @@
         justify-content: center;
         align-items: center;
         min-height: 100vh;
+        background-color: var(--bg-color);
         padding: 20px;
-        background-color: #243447; /* Sfondo leggermente più scuro */
-    }
-    .login-panel {
-        background: var(--panel-bg);
-        padding: 40px;
-        border-radius: 12px;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
-        max-width: 400px;
-        width: 100%;
-        text-align: center;
-    }
-    h1 {
-        color: var(--text-color-bright);
-        margin-bottom: 30px;
-        font-size: 2.2rem;
-        font-weight: 700;
     }
 
-    /* Input e Form */
+    .login-card {
+        background-color: var(--card-bg);
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 400px;
+        color: var(--text-color);
+    }
+
+    h1 {
+        text-align: center;
+        color: var(--accent-color);
+        margin-bottom: 25px;
+        font-size: 2rem;
+    }
+
     .form-group {
-        text-align: left;
         margin-bottom: 20px;
     }
+
     label {
         display: block;
         margin-bottom: 8px;
         font-weight: 600;
-        color: var(--text-color);
-        font-size: 0.95rem;
     }
-    input {
+
+    input[type="email"], input[type="password"] {
         width: 100%;
         padding: 12px;
-        border-radius: 8px;
         border: 1px solid var(--input-border);
-        background: var(--input-bg);
-        color: var(--text-color);
+        border-radius: 8px;
         box-sizing: border-box;
         transition: border-color 0.3s;
     }
-    input:focus {
+
+    input[type="email"]:focus, input[type="password"]:focus {
         border-color: var(--accent-color);
         outline: none;
     }
-    /* Aggiunto il controllo anche alla disabilitazione */
-    input:disabled {
-        opacity: 0.8;
-        cursor: not-allowed;
-    }
 
-    /* Pulsanti */
-    .login-button {
+    .action-button {
         width: 100%;
-        padding: 12px;
+        padding: 14px;
         border: none;
         border-radius: 8px;
-        font-weight: 700;
         font-size: 1rem;
+        font-weight: 700;
         cursor: pointer;
-        margin-top: 15px;
-        transition: background 0.3s, transform 0.1s;
-        background: var(--accent-color);
-        color: #fff;
+        transition: background-color 0.3s, opacity 0.3s;
+        margin-top: 10px;
     }
-    .login-button:hover:not(:disabled) {
-        background: #2980b9;
-    }
-    .login-button:active:not(:disabled) {
-        transform: scale(0.98);
-    }
-    .login-button:disabled {
+
+    .action-button:disabled {
         opacity: 0.6;
         cursor: not-allowed;
     }
 
-    /* Pulsante Social Login */
-    .social-login-button {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        padding: 10px;
-        margin-bottom: 20px;
-        border: 1px solid var(--input-border);
-        border-radius: 8px;
-        background-color: #34495e;
-        color: var(--text-color-bright);
-        font-weight: 600;
-        cursor: pointer;
-        transition: background-color 0.3s;
-    }
-    .social-login-button:hover {
-        background-color: #405a74;
-    }
-    .google-icon {
-        width: 24px;
-        height: 24px;
-        margin-right: 10px;
-        /* Per rendere l'icona Google visualizzabile in SVG su sfondi scuri */
-        background-color: white; 
-        border-radius: 50%;
-        padding: 2px;
+    .login-button {
+        background-color: var(--accent-color);
+        color: white;
     }
 
-    /* Divider */
-    .divider {
+    .login-button:not(:disabled):hover {
+        background-color: #0056b3;
+    }
+
+    .google-button {
+        background-color: var(--google-color);
+        color: white;
+    }
+
+    .google-button:not(:disabled):hover {
+        background-color: #3367d6;
+    }
+
+    .error-message {
+        color: var(--error-color);
+        background-color: #fcebeb;
+        padding: 10px;
+        border-radius: 8px;
+        margin-top: 15px;
+        text-align: center;
+        font-weight: 500;
+    }
+
+    .success-message {
+        color: var(--success-color);
+        background-color: #e6fff1;
+        padding: 10px;
+        border-radius: 8px;
+        margin-top: 15px;
+        text-align: center;
+        font-weight: 500;
+    }
+
+    .separator {
         display: flex;
         align-items: center;
         text-align: center;
-        color: #7f8c8d;
         margin: 25px 0;
-    }
-    .divider::before,
-    .divider::after {
-        content: '';
-        flex: 1;
-        border-bottom: 1px solid #4d6175;
-    }
-    .divider:not(:empty)::before {
-        margin-right: .5em;
-    }
-    .divider:not(:empty)::after {
-        margin-left: .5em;
+        color: #888;
     }
 
-    /* Messaggi */
-    .error {
-        color: var(--error-color);
-        margin-bottom: 15px;
+    .line {
+        flex-grow: 1;
+        border-top: 1px solid #ddd;
+    }
+
+    .separator span {
+        padding: 0 15px;
         font-size: 0.9rem;
     }
-    .help-links {
-        margin-top: 15px;
-        font-size: 0.9rem;
-        color: var(--text-color);
+    
+    .reset-link {
+        text-align: right;
+        margin-top: 10px;
     }
-    .help-links a {
+    
+    .text-button {
+        background: none;
+        border: none;
         color: var(--accent-color);
-        text-decoration: none;
+        text-decoration: underline;
+        cursor: pointer;
+        font-size: 0.9rem;
+        padding: 0;
         transition: color 0.2s;
     }
-    .help-links a:hover {
-        color: #5dade2;
+    
+    .text-button:hover:not(:disabled) {
+        color: #0056b3;
     }
 </style>

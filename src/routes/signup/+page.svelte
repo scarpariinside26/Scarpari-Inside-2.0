@@ -8,8 +8,7 @@
 
     let email = '';
     let password = '';
-    // Aggiungi il nuovo campo
-    let phone_number = ''; 
+    let phone_number = ''; // Campo per il telefono
     
     let errorMessage = '';
     let successMessage = '';
@@ -20,21 +19,17 @@
         successMessage = '';
         loading = true;
 
-        // Validazione lato client per il numero di telefono
+        // Validazione Lato Client
         if (!phone_number || phone_number.length < 5) {
             errorMessage = 'Il numero di telefono è obbligatorio e deve essere valido.';
             loading = false;
             return;
         }
 
-        // 1. Esegui la registrazione su Supabase (solo email/password)
+        // 1. Esegui la registrazione su auth.users
         const { data, error } = await supabase.auth.signUp({
             email: email,
             password: password,
-            options: {
-                // Opzionale: puoi usare questa riga per salvare il telefono nel metadata utente (auth.users)
-                data: { phone_number: phone_number } 
-            }
         });
 
         if (error) {
@@ -42,23 +37,28 @@
             loading = false;
             return;
         }
-
-        // --- Logica per inserire il numero di telefono nella tua tabella ---
-        // Se la registrazione ha successo e hai bisogno di inserirlo in 'contatti' o 'profili'
+        
+        // 2. Inserimento dei dati in profili_utenti
         if (data.user) {
-            // L'ID utente è ora disponibile
             const user_id = data.user.id;
             
-            // Inserisci nella tabella 'contatti' (Assicurati che la tua tabella esista)
-            const { error: insertError } = await supabase
-                .from('contatti') // Sostituisci con il nome corretto della tua tabella
+            // Inserisci email e telefono nella tua tabella 'profili_utenti'
+            const { error: profileError } = await supabase
+                .from('profili_utenti')
                 .insert([
-                    { user_id: user_id, phone_number: phone_number }
+                    { 
+                        user_id: user_id, 
+                        email: email, // Salviamo la mail
+                        telefono: phone_number, // Salviamo il telefono
+                        // I campi 'nome_completo', 'tipo_profilo', ecc. avranno i valori di default o null 
+                        // Saranno compilati successivamente
+                    }
                 ]);
 
-            if (insertError) {
-                // Nota: In caso di errore qui, l'utente è registrato, ma i contatti no.
-                console.error("Errore nell'inserimento dei contatti:", insertError);
+            if (profileError) {
+                // Se questo inserimento fallisce (es. Policy RLS bloccata), logga l'errore.
+                console.error("Errore nell'inserimento del profilo:", profileError);
+                // Puoi decidere se bloccare l'utente qui o lasciare che proceda alla conferma email.
             }
         }
         // ------------------------------------------------------------------
@@ -66,9 +66,10 @@
         successMessage = 'Registrazione quasi completata! Controlla la tua email per il link di conferma.';
         loading = false;
         
+        // Non reindirizzare subito per dare tempo all'utente di leggere il messaggio
         setTimeout(() => {
              goto('/login');
-        }, 3000);
+        }, 5000);
     }
 </script>
 
@@ -91,6 +92,7 @@
                 <label for="phone">Numero di Telefono **(Obbligatorio)**</label>
                 <input type="tel" id="phone" bind:value={phone_number} required disabled={loading} />
             </div>
+
             {#if errorMessage}
                 <p class="error">{errorMessage}</p>
             {/if}
@@ -115,5 +117,79 @@
 </div>
 
 <style>
-    /* ... I tuoi stili esistenti ... */
+    /* Incolla qui i tuoi stili */
+    .signup-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 20px;
+    }
+    .signup-panel {
+        background: var(--panel-bg);
+        padding: 40px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        max-width: 400px;
+        width: 100%;
+        text-align: center;
+    }
+    h1 {
+        color: var(--text-color-bright);
+        margin-bottom: 25px;
+        font-size: 2rem;
+    }
+    .form-group {
+        text-align: left;
+        margin-bottom: 20px;
+    }
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+    input {
+        width: 100%;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid var(--input-border);
+        background: var(--input-bg);
+        color: var(--text-color);
+        box-sizing: border-box;
+    }
+    .signup-button {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 1rem;
+        cursor: pointer;
+        margin-top: 15px;
+        transition: background 0.2s;
+        background: var(--accent-color);
+        color: black;
+    }
+    .signup-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    .error {
+        color: var(--error-color);
+        margin-bottom: 15px;
+    }
+    .success {
+        color: var(--success-color);
+        margin-bottom: 15px;
+    }
+    .help-links {
+        margin-top: 20px;
+        font-size: 0.9rem;
+        color: var(--text-color);
+    }
+    .help-links a {
+        color: var(--accent-color);
+        text-decoration: none;
+    }
 </style>

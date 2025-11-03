@@ -1,27 +1,24 @@
 <script>
     import { goto } from '$app/navigation';
-    import { getContext, onMount } from 'svelte';
+    import { getContext } from 'svelte'; // onMount non è più necessario qui
     import { quartOut } from 'svelte/easing';
     import { fly } from 'svelte/transition';
 
-    // DICHIARA LA VARIABILE. Per default è 'undefined'.
+    // DICHIARAZIONE E ASSEGNAZIONE
+    // getContext DEVE essere chiamato durante l'inizializzazione del componente.
     let supabase; 
-
-    onMount(() => {
-        // ASSEGNA IL VALORE SOLO DOPO CHE IL LAYOUT HA ESEGUITO setContext
-        try {
-            supabase = getContext('supabase'); 
-        } catch (e) {
-            // Questo catch gestisce l'errore se getContext viene chiamato dove
-            // non c'è un setContext (es. se /login non è figlio di un layout).
-            console.error("ERRORE: Impossibile trovare 'supabase' nel contesto.", e);
-        }
-        
-        // DEBUG: Se ancora fallisce, vedrai questo errore:
-        if (!supabase) {
-             console.error("ERRORE: Supabase non trovato nel contesto dopo il mount.");
-        }
-    });
+    try {
+        supabase = getContext('supabase'); 
+    } catch (e) {
+        // Cattura l'errore se getContext non può essere chiamato (es. non c'è setContext in un genitore)
+        console.error("ATTENZIONE: Fallimento nell'inizializzazione di 'supabase' dal contesto.", e.message);
+        // La variabile supabase rimane undefined o null, che verrà gestito dal controllo nel markup.
+    }
+    
+    // DEBUG: Se supabase è nullo dopo l'inizializzazione, questo log viene eseguito subito.
+    if (!supabase) {
+         console.warn("WARN: Il client Supabase non è stato trovato o inizializzato.");
+    }
 
     let email = '';
     let password = '';

@@ -1,14 +1,27 @@
-<script>
-    import { setContext } from 'svelte';
-    import '$lib/styles/app.css';
-    
-    // ... (il tuo codice è qui e va bene)
-    export let data;
+import { createClient } from '@supabase/supabase-js';
+// Assicurati che queste variabili siano definite nel tuo file .env e rese pubbliche.
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 
-    // INIEZIONE CRUCIALE: Rendi l'istanza Supabase e la sessione disponibili
-    setContext('supabase', data.supabase);
-    setContext('session', data.session); 
+/** @type {import('./$types').LayoutLoad} */
+export async function load({ fetch, data }) {
+    // La funzione load è l'unico contenuto di questo file. Non deve contenere tag Svelte.
     
-</script>
-<style>...</style>
-<slot />
+    // Inizializza il client Supabase
+    const supabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+        global: {
+            fetch: fetch, // Usa fetch di SvelteKit per il lato server
+        },
+    });
+
+    // Ottiene la sessione corrente
+    const { 
+        data: { session }, 
+    } = await supabase.auth.getSession();
+    
+    // Restituisce l'oggetto Supabase e la sessione.
+    // Questi saranno disponibili come data.supabase e data.session in +layout.svelte.
+    return { 
+        supabase, 
+        session,
+    };
+}

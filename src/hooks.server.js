@@ -1,53 +1,38 @@
 // src/hooks.server.js
 import { createClient } from '@supabase/supabase-js';
-import { sequence } from '@sveltejs/kit/hooks'; 
-
-// Importa l'URL Pubblico per entrambi i client (risoluzione Errore 500)
-import { 
-    PUBLIC_SUPABASE_URL, 
-    PUBLIC_SUPABASE_ANON_KEY 
-} from '$env/static/public';
-
-// Importa la chiave privata
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 import { SUPABASE_SERVICE_KEY } from '$env/static/private'; 
 
 
-// Funzione Hook Principale
 async function handleSupabase({ event, resolve }) {
-    // --- 1. Client Standard (per le operazioni come locals.supabase) ---
-    // Questo client è quello che il tuo +page.server.js usa per le query SQL.
+    // 1. Client Standard
     event.locals.supabase = createClient(
         PUBLIC_SUPABASE_URL,
         PUBLIC_SUPABASE_ANON_KEY,
     );
     
-    // --- 2. Client Admin (per operazioni con privilegi elevati) ---
+    // 2. Client Admin (usa la Service Key)
     event.locals.supabaseAdmin = createClient(
         PUBLIC_SUPABASE_URL,
         SUPABASE_SERVICE_KEY, 
         {
             auth: {
-                persistSession: false // Cruciale per Vercel
+                persistSession: false
             }
         }
     );
 
-    // --- 3. Implementazione di getSession() ---
-    // Dobbiamo re-implementare la funzione getSession() che il tuo +page.server.js si aspetta.
+    // 3. Implementa getSession() e carica i dati
     event.locals.getSession = async () => {
-        // Chiama il metodo standard Supabase per recuperare la sessione
         const { data: { session } } = await event.locals.supabase.auth.getSession();
         return session;
     };
 
-    // --- 4. Carica la Sessione e il Profilo (per il tuo +page.server.js) ---
-    // Questo carica la sessione e il profilo nell'oggetto locals, in modo che 
-    // siano disponibili per tutte le tue route server.
     const session = await event.locals.getSession();
     event.locals.session = session;
 
     if (session) {
-        // Recupera i dati del profilo dalla tua tabella 'profili_utenti' usando l'ID utente.
+        // Carica il profilo
         const { data: profile } = await event.locals.supabase
             .from('profili_utenti')
             .select('*')
@@ -62,5 +47,4 @@ async function handleSupabase({ event, resolve }) {
     return resolve(event);
 }
 
-// Esporta l'handler
 export const handle = handleSupabase;

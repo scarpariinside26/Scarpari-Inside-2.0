@@ -1,25 +1,31 @@
 import { createClient } from '@supabase/supabase-js';
-// Assicurati che queste variabili siano definite nel tuo file .env e rese pubbliche.
+// Importa le variabili d'ambiente pubbliche da SvelteKit
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+
+// Dichiara la variabile all'esterno della funzione 'load' per implementare il Singleton.
+// In questo modo, il client viene creato una sola volta sul lato client.
+let supabase;
 
 /** @type {import('./$types').LayoutLoad} */
 export async function load({ fetch, data }) {
-    // La funzione load è l'unico contenuto di questo file. Non deve contenere tag Svelte.
     
-    // Inizializza il client Supabase
-    const supabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-        global: {
-            fetch: fetch, // Usa fetch di SvelteKit per il lato server
-        },
-    });
+    // Crea l'istanza di Supabase solo se non è stata ancora creata.
+    if (!supabase) {
+        supabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+            global: {
+                // Assicura che SvelteKit fetch venga usato, utile per il server-side rendering
+                fetch: fetch, 
+            },
+        });
+    }
 
-    // Ottiene la sessione corrente
+    // Ottiene la sessione utente attuale.
     const { 
         data: { session }, 
     } = await supabase.auth.getSession();
     
-    // Restituisce l'oggetto Supabase e la sessione.
-    // Questi saranno disponibili come data.supabase e data.session in +layout.svelte.
+    // Restituisce l'istanza di Supabase e la sessione.
+    // Questi saranno iniettati nel +layout.svelte tramite la prop `data`.
     return { 
         supabase, 
         session,

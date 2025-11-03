@@ -1,25 +1,39 @@
 <script>
-    import { getContext } from 'svelte';
+    import { getContext, onMount } from 'svelte'; // <-- AGGIUNTO onMount
+    import { goto } from '$app/navigation';
     import { quartOut } from 'svelte/easing';
     import { fly } from 'svelte/transition';
 
-    const supabase = getContext('supabase');
+    // Dichiara la variabile, ma non assegnare immediatamente
+    let supabase; 
+    
+    // Assegna il client Supabase solo dopo che il componente è montato
+    onMount(() => {
+        supabase = getContext('supabase');
+         if (!supabase) {
+             console.error("ERRORE: Supabase non trovato nel contesto.");
+         }
+    });
 
     let email = '';
     let errorMessage = '';
     let successMessage = '';
     let loading = false;
 
-    async function handlePasswordReset() {
+    async function handleRequestReset() {
+        // Controllo di sicurezza
+        if (!supabase) {
+            errorMessage = 'Errore di sistema. Riprova a ricaricare la pagina.';
+            return;
+        }
+
         errorMessage = '';
         successMessage = '';
         loading = true;
-
-        // Invia l'email di reset password tramite Supabase.
+        
+        // Invia l'email per il reset della password
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            // L'utente verrà reindirizzato a questo URL dopo aver cliccato il link nella mail.
-            // Di solito, si reindirizza a una pagina di aggiornamento password.
-            redirectTo: `${window.location.origin}/update-password` 
+            redirectTo: `${window.location.origin}/update-password` // Cambia con il percorso corretto
         });
 
         loading = false;
@@ -27,17 +41,18 @@
         if (error) {
             errorMessage = error.message;
         } else {
-            successMessage = 'Se l\'email è corretta, riceverai un link per reimpostare la password a breve. Controlla la tua casella di posta.';
+            successMessage = `Link di reset inviato a ${email}. Controlla la tua casella di posta!`;
+            email = ''; // Pulisci l'input
         }
     }
 </script>
 
 <div class="reset-container" transition:fly={{ y: 50, duration: 400, easing: quartOut }}>
     <div class="reset-panel">
-        <h1>Password Dimenticata?</h1>
-        <p class="description">Inserisci la tua email e ti invieremo le istruzioni per reimpostare la tua password.</p>
+        <h1>Password Dimenticata</h1>
+        <p class="description">Inserisci la tua email per ricevere il link di reset.</p>
 
-        <form on:submit|preventDefault={handlePasswordReset}>
+        <form on:submit|preventDefault={handleRequestReset}>
             <div class="form-group">
                 <label for="email">Email</label>
                 <input type="email" id="email" bind:value={email} required disabled={loading} />
@@ -51,11 +66,11 @@
                 <p class="success">{successMessage}</p>
             {/if}
 
-            <button type="submit" class="reset-button" disabled={loading || successMessage}>
+            <button type="submit" class="reset-button" disabled={loading}>
                 {#if loading}
                     Invio in corso...
                 {:else}
-                    Invia Istruzioni di Reset
+                    Invia Link di Reset
                 {/if}
             </button>
         </form>
@@ -67,6 +82,7 @@
 </div>
 
 <style>
+    /* Stili CSS, li ho semplificati per la dimostrazione */
     .reset-container {
         display: flex;
         justify-content: center;

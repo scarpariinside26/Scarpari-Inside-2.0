@@ -11,21 +11,8 @@
     onMount(() => {
         // ASSEGNA IL VALORE SOLO DOPO CHE IL LAYOUT HA ESEGUITO setContext
         supabase = getContext('supabase'); 
-        <script>
-    import { goto } from '$app/navigation';
-    import { getContext, onMount } from 'svelte';
-    import { quartOut } from 'svelte/easing';
-    import { fly } from 'svelte/transition';
-
-    // DICHIARA LA VARIABILE MA NON ASSEGNARE IL VALORE QUI
-    let supabase; 
-
-    // Esegui getContext solo quando il componente è montato
-    onMount(() => {
-        // ASSEGNA IL VALORE SOLO DOPO CHE IL LAYOUT HA ESEGUITO setContext
-        supabase = getContext('supabase'); 
         
-        // DEBUG: Se ancora fallisce, vedrai questo errore:
+        // *DEBUG* Se ancora fallisce, vedrai questo errore:
         if (!supabase) {
              console.error("ERRORE: Supabase non trovato nel contesto dopo il mount.");
         }
@@ -55,14 +42,8 @@
         loading = false;
         
         if (error) {
-            // Migliore gestione degli errori di login comuni
-            if (error.status === 400 && error.message.includes("Invalid login credentials")) {
-                errorMessage = "Credenziali non valide. Riprova.";
-            } else {
-                errorMessage = error.message;
-            }
+            errorMessage = error.message;
         } else {
-            // Reindirizzamento in caso di successo
             await goto('/', { replaceState: true });
         }
     }
@@ -85,11 +66,9 @@
             }
         });
 
-        // NOTA: il reindirizzamento avviene a livello di browser, 
-        // quindi la variabile `loading` potrebbe non resettarsi qui
-        
+        loading = false;
+
         if (error) {
-            loading = false; // Solo se l'errore avviene prima del reindirizzamento
             errorMessage = error.message;
         }
     }
@@ -108,8 +87,8 @@
                 Caricamento...
             {:else}
                 <svg viewBox="0 0 48 48" class="google-icon"><path fill="#FFC107" d="M43.61 20.08c0-.68-.06-1.35-.18-2.01H24v3.8h11.75c-.52 2.15-1.97 3.99-4.21 5.25v3.31h4.29c2.51-2.3 4.07-5.74 4.07-9.75z"/><path fill="#FF3D00" d="M24 44c5.29 0 9.77-1.76 13.03-4.78l-4.29-3.31c-2.37 1.58-5.4 2.51-8.74 2.51-6.66 0-12.33-4.48-14.33-10.43H5.3v3.31C8.82 39.46 15.93 44 24 44z"/><path fill="#4CAF50" d="M9.67 24c-.21-1.04-.33-2.12-.33-3.23s.12-2.19.33-3.23V14.23H5.3C4.54 16.53 4 19.16 4 21.99s.54 5.46 1.3 7.76l4.37-3.31z"/><path fill="#1976D2" d="M24 8c3.55 0 6.78 1.22 9.32 3.59l3.73-3.6C33.77 4.56 29.29 4 24 4c-8.07 0-15.18 4.54-18.7 11.23l4.37 3.31C11.67 12.48 17.34 8 24 8z"/></svg>
-            Accedi con Google
-        {/if}
+                Accedi con Google
+            {/if}
         </button>
 
         <div class="divider">o</div>
@@ -310,69 +289,3 @@
         color: #5dade2;
     }
 </style>
-
-        // *DEBUG* Se ancora fallisce, vedrai questo errore:
-        if (!supabase) {
-             console.error("ERRORE: Supabase non trovato nel contesto dopo il mount.");
-        }
-    });
-
-    let email = '';
-    let password = '';
-    let errorMessage = '';
-    let loading = false;
-
-    // Gestisce il submit del form (Email/Password)
-    async function handleLogin() {
-        // AGGIUNGI CONTROLLO DI SICUREZZA
-        if (!supabase) {
-            errorMessage = "Errore di sistema: client di autenticazione non disponibile.";
-            return;
-        }
-
-        errorMessage = '';
-        loading = true;
-
-        const { error } = await supabase.auth.signInWithPassword({
-            email: email,
-            password: password,
-        });
-
-        loading = false;
-        
-        // ... (il resto della logica rimane invariato)
-
-        if (error) {
-            errorMessage = error.message;
-        } else {
-            await goto('/', { replaceState: true });
-        }
-    }
-
-    // Gestisce il login tramite Google
-    async function handleGoogleLogin() {
-         // AGGIUNGI CONTROLLO DI SICUREZZA
-        if (!supabase) {
-            errorMessage = "Errore di sistema: client di autenticazione non disponibile.";
-            return;
-        }
-
-        errorMessage = '';
-        loading = true;
-
-        // ... (il resto della logica rimane invariato)
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: `${window.location.origin}/auth/callback`
-            }
-        });
-
-        loading = false;
-
-        if (error) {
-            errorMessage = error.message;
-        }
-    }
-
-</script>

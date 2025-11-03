@@ -1,18 +1,23 @@
 <script>
     import { goto } from '$app/navigation';
-    import { getContext, onMount } from 'svelte'; // <-- AGGIUNGI onMount
+    import { getContext, onMount } from 'svelte';
     import { quartOut } from 'svelte/easing';
     import { fly } from 'svelte/transition';
 
-    // DICHIARA LA VARIABILE MA NON ASSEGNARE IL VALORE QUI
+    // DICHIARA LA VARIABILE. Per default è 'undefined'.
     let supabase; 
 
-    // Esegui getContext solo quando il componente è montato
     onMount(() => {
         // ASSEGNA IL VALORE SOLO DOPO CHE IL LAYOUT HA ESEGUITO setContext
-        supabase = getContext('supabase'); 
+        try {
+            supabase = getContext('supabase'); 
+        } catch (e) {
+            // Questo catch gestisce l'errore se getContext viene chiamato dove
+            // non c'è un setContext (es. se /login non è figlio di un layout).
+            console.error("ERRORE: Impossibile trovare 'supabase' nel contesto.", e);
+        }
         
-        // *DEBUG* Se ancora fallisce, vedrai questo errore:
+        // DEBUG: Se ancora fallisce, vedrai questo errore:
         if (!supabase) {
              console.error("ERRORE: Supabase non trovato nel contesto dopo il mount.");
         }
@@ -25,9 +30,9 @@
 
     // Gestisce il submit del form (Email/Password)
     async function handleLogin() {
-        // AGGIUNGI CONTROLLO DI SICUREZZA
+        // PRIMO CONTROLLO: Se supabase non è ancora definito, ferma l'esecuzione.
         if (!supabase) {
-            errorMessage = "Errore di sistema: client di autenticazione non disponibile.";
+            errorMessage = "Errore di sistema: servizio di autenticazione non ancora disponibile.";
             return;
         }
 
@@ -50,9 +55,9 @@
 
     // Gestisce il login tramite Google
     async function handleGoogleLogin() {
-        // AGGIUNGI CONTROLLO DI SICUREZZA
+        // PRIMO CONTROLLO: Se supabase non è ancora definito, ferma l'esecuzione.
         if (!supabase) {
-            errorMessage = "Errore di sistema: client di autenticazione non disponibile.";
+            errorMessage = "Errore di sistema: servizio di autenticazione non ancora disponibile.";
             return;
         }
 
@@ -82,7 +87,8 @@
     <div class="login-panel">
         <h1>Accedi</h1>
 
-        <button on:click={handleGoogleLogin} class="social-login-button google-button" disabled={loading}>
+        <!-- Disabilita il pulsante se supabase non è ancora pronto -->
+        <button on:click={handleGoogleLogin} class="social-login-button google-button" disabled={loading || !supabase}>
             {#if loading}
                 Caricamento...
             {:else}
@@ -96,19 +102,20 @@
         <form on:submit|preventDefault={handleLogin}>
             <div class="form-group">
                 <label for="email">Email</label>
-                <input type="email" id="email" bind:value={email} required disabled={loading} />
+                <input type="email" id="email" bind:value={email} required disabled={loading || !supabase} />
             </div>
             
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" bind:value={password} required disabled={loading} />
+                <input type="password" id="password" bind:value={password} required disabled={loading || !supabase} />
             </div>
 
             {#if errorMessage}
                 <p class="error">{errorMessage}</p>
             {/if}
             
-            <button type="submit" class="login-button" disabled={loading}>
+            <!-- Disabilita il pulsante se supabase non è ancora pronto -->
+            <button type="submit" class="login-button" disabled={loading || !supabase}>
                 {#if loading}
                     Accesso in corso...
                 {:else}
@@ -189,6 +196,7 @@
         border-color: var(--accent-color);
         outline: none;
     }
+    /* Aggiunto il controllo anche alla disabilitazione */
     input:disabled {
         opacity: 0.8;
         cursor: not-allowed;

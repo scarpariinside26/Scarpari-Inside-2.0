@@ -1,10 +1,19 @@
 <script>
     import { goto } from '$app/navigation';
-    import { getContext } from 'svelte';
+    import { getContext, onMount } from 'svelte'; // <-- AGGIUNTO onMount
     import { quartOut } from 'svelte/easing';
     import { fly } from 'svelte/transition';
 
-    const supabase = getContext('supabase');
+    // Dichiara la variabile, ma non assegnare
+    let supabase;
+
+    // Assegna il client Supabase solo DOPO che il componente è montato
+    onMount(() => {
+        supabase = getContext('supabase');
+        if (!supabase) {
+             console.error("ERRORE: Supabase non trovato nel contesto.");
+         }
+    });
 
     let email = '';
     let password = '';
@@ -15,6 +24,12 @@
     let loading = false;
 
     async function handleSignup() {
+        // Controllo di sicurezza
+        if (!supabase) {
+            errorMessage = 'Errore di sistema. Ricarica la pagina.';
+            return;
+        }
+
         errorMessage = '';
         successMessage = '';
         loading = true;
@@ -48,17 +63,13 @@
                 .insert([
                     { 
                         user_id: user_id, 
-                        email: email, // Salviamo la mail
-                        telefono: phone_number, // Salviamo il telefono
-                        // I campi 'nome_completo', 'tipo_profilo', ecc. avranno i valori di default o null 
-                        // Saranno compilati successivamente
+                        email: email, 
+                        telefono: phone_number,
                     }
                 ]);
 
             if (profileError) {
-                // Se questo inserimento fallisce (es. Policy RLS bloccata), logga l'errore.
                 console.error("Errore nell'inserimento del profilo:", profileError);
-                // Puoi decidere se bloccare l'utente qui o lasciare che proceda alla conferma email.
             }
         }
         // ------------------------------------------------------------------
@@ -117,7 +128,7 @@
 </div>
 
 <style>
-    /* Incolla qui i tuoi stili */
+    /* Stili CSS */
     .signup-container {
         display: flex;
         justify-content: center;

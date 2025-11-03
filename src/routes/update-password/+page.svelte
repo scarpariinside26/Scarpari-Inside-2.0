@@ -1,10 +1,19 @@
 <script>
-    import { getContext } from 'svelte';
+    import { getContext, onMount } from 'svelte'; // <-- AGGIUNTO onMount
     import { goto } from '$app/navigation';
     import { quartOut } from 'svelte/easing';
     import { fly } from 'svelte/transition';
 
-    const supabase = getContext('supabase');
+    // Dichiara la variabile, ma non assegnare immediatamente
+    let supabase; 
+    
+    // Assegna il client Supabase solo dopo che il componente è montato
+    onMount(() => {
+        supabase = getContext('supabase');
+         if (!supabase) {
+             console.error("ERRORE: Supabase non trovato nel contesto.");
+         }
+    });
 
     let newPassword = '';
     let confirmPassword = '';
@@ -13,6 +22,12 @@
     let loading = false;
 
     async function handlePasswordUpdate() {
+        // Controllo di sicurezza
+        if (!supabase) {
+            errorMessage = 'Errore di sistema. Riprova a ricaricare la pagina.';
+            return;
+        }
+
         errorMessage = '';
         successMessage = '';
         
@@ -83,7 +98,7 @@
 </div>
 
 <style>
-    /* Usa gli stessi stili del login/reset per coerenza */
+    /* Stili CSS copiati per completezza */
     .update-container {
         display: flex;
         justify-content: center;

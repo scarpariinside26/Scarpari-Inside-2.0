@@ -1,7 +1,6 @@
-// src/hooks.server.js - CRUCIALE PER LA SESSIONE E I DATI
 import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
-import { SUPABASE_SERVICE_KEY } from '$env/static/private'; 
+import { SUPABASE_SERVICE_KEY } from '$env/static/private';
 
 
 async function handleSupabase({ event, resolve }) {
@@ -32,14 +31,25 @@ async function handleSupabase({ event, resolve }) {
     event.locals.session = session;
 
     if (session) {
-        // Carica il profilo (se il tuo codice lo richiede)
-        const { data: profile } = await event.locals.supabase
+        // --- BLOCCO TEMPORANEAMENTE DISABILITATO PER RISOLVERE ERRORE 500 ---
+        // Se l'errore 500 scompare, il problema è qui (policy RLS o nome colonna).
+        /*
+        const { data: profile, error } = await event.locals.supabase
             .from('profili_utenti')
             .select('*')
             .eq('user_id', session.user.id)
             .maybeSingle();
 
-        event.locals.profile = profile;
+        if (error) {
+            console.error('Errore nel caricamento del profilo:', error);
+            event.locals.profile = null;
+        } else {
+            event.locals.profile = profile;
+        }
+        */
+       
+       // Sostituito con null per testare il flusso di autenticazione base:
+       event.locals.profile = null;
     } else {
         event.locals.profile = null;
     }

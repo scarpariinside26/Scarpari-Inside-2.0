@@ -8,12 +8,38 @@
     let supabase = getContext('supabase');
     let isSupabaseReady = !!supabase;
     
+    // Variabili di stato
     let email = '';
     let password = '';
     let errorMessage = '';
     let loading = false;
+    
+    /**
+     * Gestisce il login tramite email e password.
+     */
+    async function handleLogin() {
+        if (!isSupabaseReady) { 
+            errorMessage = 'Il sistema non è ancora pronto. Attendi un istante e riprova.';
+            return;
+        }
+        
+        errorMessage = '';
+        loading = true;
 
-    // ... handleLogin function ...
+        const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+
+        if (error) {
+            errorMessage = error.message;
+        } else {
+            // L'utente viene reindirizzato automaticamente dal listener dopo il successo.
+            goto('/');
+        }
+        
+        loading = false;
+    }
     
     /**
      * Gestisce il login tramite Google OAuth.
@@ -27,11 +53,9 @@
         errorMessage = '';
         loading = true;
 
-        // VERIFICA CHE QUESTO URL SIA AUTORIZZATO NEL PANNELLO SUPABASE!
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                // Deve puntare al tuo endpoint: /auth/callback
                 redirectTo: `${window.location.origin}/auth/callback`,
                 skipBrowserRedirect: false, 
             },
@@ -41,6 +65,7 @@
             errorMessage = error.message;
             loading = false;
         }
+        // Se va bene, l'utente viene reindirizzato a Google, quindi loading non viene resettato qui.
     }
 </script>
 
@@ -49,7 +74,7 @@
         <h1>Accedi</h1>
 
         <!-- Form di Login Email/Password -->
-        <form on:submit|preventDefault={handleLogin}>
+        <form on:submit|preventDefault={handleLogin}> 
             <div class="form-group">
                 <label for="email">Email</label>
                 <input type="email" id="email" bind:value={email} required disabled={loading || !isSupabaseReady} />

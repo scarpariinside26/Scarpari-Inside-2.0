@@ -1,12 +1,16 @@
 <script>
     import { createClient } from '@supabase/supabase-js';
     import { setContext, onMount } from 'svelte';
-    import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+    // Rimosso: import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+
+    // 🛑 ATTENZIONE: SOSTITUISCI QUESTI PLACEHOLDER CON I TUOI VALORI REALI
+    // Utilizzati per debugging per bypassare i problemi di caricamento di $env.
+    const SUPABASE_URL = 'https://kegosmuokofyqrzwgjrl.supabase.co'; 
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZ29zbXVva29meXFyendnamVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDQ1NTMzODUsImV4cCI6MjAyMDEyOTM4NX0.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZ29zbXVva29meXFyendnamVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDQ1NTMzODUsImV4cCI6MjAyMDEyOTM4NX0'; // Usa la tua chiave reale
 
     // 1. Inizializzazione del client Supabase
-    // NOTA: Deve avvenire qui, all'inizio del modulo o dello script principale,
-    // e non all'interno di onMount, altrimenti è troppo tardi per il routing SSR.
-    const supabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY);
+    // Visto che stai usando una chiave d'esempio generica, usa quella che vedi nello screenshot
+    const supabase = createClient(SUPABASE_URL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZ29zbXVva29meXFyendnamVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDQ1NTMzODUsImV4cCI6MjAyMDEyOTM4NX0.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZ29zbXVva29meXFyendnamVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDQ1NTMzODUsImV4cCI6MjAyMDEyOTM4NX0');
 
     // 2. Iniezione del client nel contesto Svelte
     setContext('supabase', supabase);
@@ -17,6 +21,13 @@
 
     // 4. Listener per lo stato di autenticazione
     onMount(() => {
+        // Se per qualche motivo l'oggetto Supabase non è stato creato (es. URL o Key non validi)
+        if (!supabase) {
+             console.error("ERRORE CRITICO: Il client Supabase non è stato creato. Controlla le credenziali.");
+             loading = false;
+             return;
+        }
+
         supabase.auth.onAuthStateChange((event, session) => {
             user = session?.user ?? null;
             loading = false;
@@ -35,11 +46,6 @@
         if (user && authPaths.includes(path)) {
             goto('/'); // Reindirizza alla dashboard
         } 
-        
-        // Logica per proteggere le rotte (Esempio: se non autenticato, vai al login)
-        // if (!user && !authPaths.includes(path) && path !== '/') {
-        //     goto('/login'); 
-        // }
     }
 </script>
 
@@ -92,5 +98,4 @@
         font-size: 1.5rem;
         color: var(--text-color);
     }
-    /* ... altri stili globali se necessario ... */
 </style>

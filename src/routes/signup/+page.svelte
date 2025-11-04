@@ -1,21 +1,16 @@
 <script>
     import { goto } from '$app/navigation';
-    import { getContext, onMount } from 'svelte';
+    import { getContext } from 'svelte';
     import { quartOut } from 'svelte/easing';
     import { fly } from 'svelte/transition';
 
-    let supabase;
-
-    onMount(() => {
-        supabase = getContext('supabase');
-        if (!supabase) {
-             console.error("ERRORE: Supabase non trovato nel contesto.");
-         }
-    });
+    // 1. CHIAMATA IMMEDIATA: Otteniamo Supabase dal Layout
+    let supabase = getContext('supabase');
+    let isSupabaseReady = !!supabase; // Aggiungiamo un flag di sicurezza
 
     let email = '';
     let password = '';
-    let nome_completo = ''; // NUOVO CAMPO OBBLIGATORIO
+    let nome_completo = ''; 
     let phone_number = ''; 
     
     let errorMessage = '';
@@ -23,7 +18,7 @@
     let loading = false;
 
     async function handleSignup() {
-        if (!supabase) {
+        if (!isSupabaseReady) { // Usiamo il flag
             errorMessage = 'Errore di sistema. Ricarica la pagina.';
             return;
         }
@@ -68,7 +63,7 @@
                         user_id: user_id, 
                         email: email, 
                         telefono: phone_number,
-                        nome_completo: nome_completo, // INSERIMENTO DEL CAMPO NOT NULL
+                        nome_completo: nome_completo, 
                     }
                 ]);
 
@@ -96,21 +91,21 @@
         <form on:submit|preventDefault={handleSignup}>
             <div class="form-group">
                 <label for="nome_completo">Nome Completo</label>
-                <input type="text" id="nome_completo" bind:value={nome_completo} required disabled={loading} />
+                <input type="text" id="nome_completo" bind:value={nome_completo} required disabled={loading || !isSupabaseReady} />
             </div>
             <div class="form-group">
                 <label for="email">Email</label>
-                <input type="email" id="email" bind:value={email} required disabled={loading} />
+                <input type="email" id="email" bind:value={email} required disabled={loading || !isSupabaseReady} />
             </div>
             
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" bind:value={password} required disabled={loading} minlength="6" />
+                <input type="password" id="password" bind:value={password} required disabled={loading || !isSupabaseReady} minlength="6" />
             </div>
             
             <div class="form-group">
                 <label for="phone">Numero di Telefono</label>
-                <input type="tel" id="phone" bind:value={phone_number} required disabled={loading} />
+                <input type="tel" id="phone" bind:value={phone_number} required disabled={loading || !isSupabaseReady} />
             </div>
 
             {#if errorMessage}
@@ -121,7 +116,7 @@
                 <p class="success">{successMessage}</p>
             {/if}
 
-            <button type="submit" class="signup-button" disabled={loading}>
+            <button type="submit" class="signup-button" disabled={loading || !isSupabaseReady}>
                 {#if loading}
                     Registrazione in corso...
                 {:else}
@@ -189,7 +184,7 @@
         margin-top: 15px;
         transition: background 0.2s;
         background: var(--accent-color);
-        color: black;
+        color: white; /* Correzione colore per visibilità */
     }
     .signup-button:disabled {
         opacity: 0.6;

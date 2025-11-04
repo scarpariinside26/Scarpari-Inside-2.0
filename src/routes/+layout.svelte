@@ -1,9 +1,8 @@
 <script>
     import { onMount, setContext } from 'svelte';
     import { writable } from 'svelte/store';
-    import { goto } from '$app/navigation';
+    // NON importare 'goto' o usare la navigazione qui se la gestisci in +layout.server.js
     
-    // CORREZIONE FINALE QUI: Il percorso corretto per i file in /src/ è "../app.css"
     import '../app.css';
 
     /** @type {import('./$types').LayoutData} */
@@ -20,23 +19,13 @@
     onMount(() => {
         // Ascolta i cambiamenti di autenticazione in tempo reale
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            if (session) {
-                // Aggiorna lo store della sessione e reindirizza alla dashboard o alla pagina iniziale
-                sessionStore.set(session);
-                
-                // Se l'utente è nella pagina di login/callback, reindirizzalo
-                if (window.location.pathname.startsWith('/auth')) {
-                    goto('/');
-                }
-            } else {
-                // Utente disconnesso
-                sessionStore.set(null);
-                
-                // Se l'utente non è autenticato e non è nella pagina di login, reindirizza
-                if (!window.location.pathname.startsWith('/auth')) {
-                    goto('/auth');
-                }
-            }
+            // Aggiorna solo lo store della sessione
+            // La logica di reindirizzamento è ora gestita interamente da +layout.server.js
+            sessionStore.set(session);
+            
+            // Nota: Se l'evento è 'SIGNED_OUT', SvelteKit reindirizzerà 
+            // automaticamente l'utente a /login se si trova su una route protetta,
+            // grazie al tuo +layout.server.js.
         });
 
         // Pulisce l'ascoltatore alla distruzione del componente
@@ -58,6 +47,7 @@
         min-height: 100vh;
         background: var(--bg-color-dark);
         color: var(--text-color);
-        font-family: 'Inter', sans-serif;
+        /* Ho lasciato Inter come fallback perché Roboto non è definito in questo file */
+        font-family: 'Inter', sans-serif; 
     }
 </style>

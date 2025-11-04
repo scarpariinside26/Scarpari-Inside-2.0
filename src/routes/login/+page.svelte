@@ -1,28 +1,24 @@
 <script>
     import { goto } from '$app/navigation';
-    import { getContext, onMount } from 'svelte';
+    import { getContext } from 'svelte'; // onMount rimosso
     import { quartOut } from 'svelte/easing';
     import { fly } from 'svelte/transition';
 
-    // Variabili di stato
-    let supabase;
-    let isSupabaseReady = false; 
+    // 1. CHIAMATA IMMEDIATA (TOP-LEVEL): Otteniamo Supabase dal Layout
+    let supabase = getContext('supabase');
+    // 2. Impostiamo lo stato di prontezza immediatamente
+    let isSupabaseReady = !!supabase;
     
     let email = '';
     let password = '';
     let errorMessage = '';
     let loading = false;
 
-    // CRUCIALE: Assicurati che supabase sia caricato solo dopo il montaggio
-    onMount(() => {
-        supabase = getContext('supabase');
-        if (!supabase) {
-            console.error("ERRORE: Supabase non trovato nel contesto.");
-        } else {
-            // IMPOSTA LO STATO SU VERO QUANDO IL CLIENT È PRONTO
-            isSupabaseReady = true; 
-        }
-    });
+    if (!isSupabaseReady) {
+        console.error("ERRORE: Supabase non trovato nel contesto al top-level.");
+        // Non impostiamo un errorMessage qui, ma lasciamo che i pulsanti si disabilitino
+        // usando !isSupabaseReady
+    }
 
     /**
      * Gestisce il login tramite email e password.
@@ -43,20 +39,19 @@
 
         if (error) {
             errorMessage = error.message;
+            loading = false;
         } else {
             // L'utente viene reindirizzato automaticamente dal listener in +layout.svelte dopo il successo.
-            // Possiamo reindirizzare subito o lasciare che sia il listener a farlo.
+            // Reindirizziamo per forzare il ricaricamento del layout e della sessione.
             goto('/');
+            loading = false; // Anche se reindirizziamo, resettiamo per sicurezza
         }
-        
-        loading = false;
     }
     
     /**
      * Gestisce il login tramite Google OAuth.
      */
     async function signInWithGoogle() {
-        // CAMBIA IL CONTROLLO DI SICUREZZA
         if (!isSupabaseReady) { 
             errorMessage = 'Il sistema non è ancora pronto. Attendi un istante e riprova.';
             return;
@@ -65,25 +60,23 @@
         errorMessage = '';
         loading = true;
 
-        // NOTA IMPORTANTE: L'URL redirectTo deve corrispondere all'URL
+        // NOTA IMPORTANTE: L'URL redirectTo deve puntare all'endpoint server +server.js 
         // che Supabase si aspetta per il callback OAuth.
-        // In SvelteKit, questo è l'URL di base (es. 'http://localhost:5173/')
-        // che Supabase usa per reindirizzare.
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
+                // Questo deve usare window.location.origin per l'URL base corretto
                 redirectTo: `${window.location.origin}/auth/callback`,
-                skipBrowserRedirect: false, // Lascia che Supabase gestisca il reindirizzamento al provider
+                skipBrowserRedirect: false, 
             },
         });
 
         if (error) {
             errorMessage = error.message;
-            // Nel caso di successo, l'utente viene reindirizzato, quindi loading non va resettato qui.
-            // Lo resettiamo solo in caso di errore immediato prima del reindirizzamento.
+            // Lo resettiamo solo in caso di errore immediato prima del reindirizzamento a Google.
             loading = false;
         }
-        // Se tutto va bene, l'utente viene reindirizzato alla pagina di Google.
+        // In caso di successo, l'utente viene reindirizzato dal provider.
     }
 
 </script>
@@ -114,6 +107,8 @@
             <button type="submit" class="login-button" disabled={loading || !isSupabaseReady}> 
                 {#if loading}
                     Accesso in corso...
+                {:else if !isSupabaseReady}
+                    Caricamento...
                 {:else}
                     Accedi
                 {/if}

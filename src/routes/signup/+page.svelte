@@ -1,13 +1,11 @@
 <script>
     import { goto } from '$app/navigation';
-    import { getContext, onMount } from 'svelte'; // <-- AGGIUNTO onMount
+    import { getContext, onMount } from 'svelte';
     import { quartOut } from 'svelte/easing';
     import { fly } from 'svelte/transition';
 
-    // Dichiara la variabile, ma non assegnare
     let supabase;
 
-    // Assegna il client Supabase solo DOPO che il componente è montato
     onMount(() => {
         supabase = getContext('supabase');
         if (!supabase) {
@@ -17,14 +15,14 @@
 
     let email = '';
     let password = '';
-    let phone_number = ''; // Campo per il telefono
+    let nome_completo = ''; // NUOVO CAMPO OBBLIGATORIO
+    let phone_number = ''; 
     
     let errorMessage = '';
     let successMessage = '';
     let loading = false;
 
     async function handleSignup() {
-        // Controllo di sicurezza
         if (!supabase) {
             errorMessage = 'Errore di sistema. Ricarica la pagina.';
             return;
@@ -35,6 +33,11 @@
         loading = true;
 
         // Validazione Lato Client
+        if (!nome_completo || nome_completo.length < 3) {
+            errorMessage = 'Il Nome Completo è obbligatorio.';
+            loading = false;
+            return;
+        }
         if (!phone_number || phone_number.length < 5) {
             errorMessage = 'Il numero di telefono è obbligatorio e deve essere valido.';
             loading = false;
@@ -57,7 +60,7 @@
         if (data.user) {
             const user_id = data.user.id;
             
-            // Inserisci email e telefono nella tua tabella 'profili_utenti'
+            // Inserisci i dati obbligatori e quelli forniti
             const { error: profileError } = await supabase
                 .from('profili_utenti')
                 .insert([
@@ -65,11 +68,13 @@
                         user_id: user_id, 
                         email: email, 
                         telefono: phone_number,
+                        nome_completo: nome_completo, // INSERIMENTO DEL CAMPO NOT NULL
                     }
                 ]);
 
             if (profileError) {
                 console.error("Errore nell'inserimento del profilo:", profileError);
+                // NOTA: Se l'inserimento del profilo fallisce, l'utente è comunque creato in auth.users!
             }
         }
         // ------------------------------------------------------------------
@@ -90,6 +95,10 @@
 
         <form on:submit|preventDefault={handleSignup}>
             <div class="form-group">
+                <label for="nome_completo">Nome Completo</label>
+                <input type="text" id="nome_completo" bind:value={nome_completo} required disabled={loading} />
+            </div>
+            <div class="form-group">
                 <label for="email">Email</label>
                 <input type="email" id="email" bind:value={email} required disabled={loading} />
             </div>
@@ -100,7 +109,7 @@
             </div>
             
             <div class="form-group">
-                <label for="phone">Numero di Telefono **(Obbligatorio)**</label>
+                <label for="phone">Numero di Telefono</label>
                 <input type="tel" id="phone" bind:value={phone_number} required disabled={loading} />
             </div>
 

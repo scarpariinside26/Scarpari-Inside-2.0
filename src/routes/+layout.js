@@ -1,33 +1,27 @@
-import { createClient } from '@supabase/supabase-js';
-// Importa le variabili d'ambiente pubbliche da SvelteKit
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+import { createSupabaseLoadClient } from '@supabase/auth-helpers-sveltekit';
 
-// Dichiara la variabile all'esterno della funzione 'load' per implementare il Singleton.
-// In questo modo, il client viene creato una sola volta sul lato client.
-let supabase;
+/**
+ * Carica l'istanza di Supabase e i dati della sessione.
+ * Esegue il lato server e poi si reidrata sul client.
+ * * @type {import('./$types').LayoutLoad}
+ */
+export const load = async ({ fetch, data, depends }) => {
+    // Forza il ricaricamento del layout ogni volta che l'autenticazione cambia (cruciale per il reindirizzamento)
+    depends('supabase:auth');
 
-/** @type {import('./$types').LayoutLoad} */
-export async function load({ fetch, data }) {
-    
-    // Crea l'istanza di Supabase solo se non è stata ancora creata.
-    if (!supabase) {
-        supabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-            global: {
-                // Assicura che SvelteKit fetch venga usato, utile per il server-side rendering
-                fetch: fetch, 
-            },
-        });
-    }
+    // Crea l'istanza del client Supabase per la funzione load
+    const supabase = createSupabaseLoadClient({
+        supabaseUrl: PUBLIC_SUPABASE_URL,
+        supabaseKey: PUBLIC_SUPABASE_ANON_KEY,
+        event: { fetch },
+        serverSession: data.session, // Sessione fornita dal server (SSR)
+    });
 
-    // Ottiene la sessione utente attuale.
-    const { 
-        data: { session }, 
+    // Ottiene i dati della sessione per lo stato iniziale
+    const {
+        data: { session },
     } = await supabase.auth.getSession();
-    
-    // Restituisce l'istanza di Supabase e la sessione.
-    // Questi saranno iniettati nel +layout.svelte tramite la prop `data`.
-    return { 
-        supabase, 
-        session,
-    };
-}
+
+    return { supabase, session };
+};

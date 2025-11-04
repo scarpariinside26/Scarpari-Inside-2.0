@@ -1,171 +1,114 @@
 <script>
-    import { getContext, onMount } from 'svelte'; // <-- AGGIUNTO onMount
+    import { getContext, onMount } from 'svelte';
     import { goto } from '$app/navigation';
-    import { quartOut } from 'svelte/easing';
-    import { fly } from 'svelte/transition';
-
-    // Dichiara la variabile, ma non assegnare immediatamente
-    let supabase; 
     
-    // Assegna il client Supabase solo dopo che il componente è montato
+    // --- Dichiarazione ---
+    // 1. Dichiara la variabile senza assegnare subito
+    let supabase; 
+    let password = '';
+    let confirmPassword = '';
+    let message = '';
+    let isSuccess = false;
+
+    // --- Inizializzazione ---
+    // 2. Assegna all'interno di onMount
     onMount(() => {
-        supabase = getContext('supabase');
-         if (!supabase) {
-             console.error("ERRORE: Supabase non trovato nel contesto.");
-         }
+        // Questa chiamata è sicura solo all'interno di onMount
+        supabase = getContext('supabase'); 
+        
+        if (!supabase) {
+            console.error("Supabase client non trovato nel contesto.");
+            message = "Errore di sistema: client non disponibile.";
+        }
     });
 
-    let newPassword = '';
-    let confirmPassword = '';
-    let errorMessage = '';
-    let successMessage = '';
-    let loading = false;
-
-    async function handlePasswordUpdate() {
-        // Controllo di sicurezza
+    // --- Logica ---
+    async function updatePassword() {
+        // Aggiungi un controllo di sicurezza per Supabase
         if (!supabase) {
-            errorMessage = 'Errore di sistema. Riprova a ricaricare la pagina.';
+            message = "Attendere il caricamento del sistema.";
             return;
         }
 
-        errorMessage = '';
-        successMessage = '';
+        if (password !== confirmPassword) {
+            message = 'Le password non corrispondono.';
+            return;
+        }
+        if (password.length < 6) {
+            message = 'La password deve contenere almeno 6 caratteri.';
+            return;
+        }
+
+        message = 'Aggiornamento in corso...';
         
-        if (newPassword !== confirmPassword) {
-            errorMessage = 'Le password non corrispondono.';
-            return;
-        }
-
-        if (newPassword.length < 6) {
-             errorMessage = 'La password deve contenere almeno 6 caratteri.';
-            return;
-        }
-
-        loading = true;
-
-        // La funzione updateUser aggiorna la password dell'utente che ha effettuato il login temporaneo tramite il link.
-        const { error } = await supabase.auth.updateUser({
-            password: newPassword
-        });
-
-        loading = false;
+        // Supabase riconosce automaticamente la sessione temporanea in base all'URL.
+        const { error } = await supabase.auth.updateUser({ password });
 
         if (error) {
-            errorMessage = error.message;
+            console.error('Errore durante l\'aggiornamento:', error);
+            message = `Errore di aggiornamento: ${error.message}`;
+            isSuccess = false;
         } else {
-            successMessage = 'Password aggiornata con successo! Sarai reindirizzato al login.';
-            // Reindirizza al login dopo un breve timeout
+            message = 'Password aggiornata con successo! Reindirizzamento...';
+            isSuccess = true;
+            // Dopo il successo, reindirizza l'utente alla dashboard
             setTimeout(() => {
-                 goto('/login');
-            }, 3000);
+                goto('/app');
+            }, 2000);
         }
     }
 </script>
 
-<div class="update-container" transition:fly={{ y: 50, duration: 400, easing: quartOut }}>
-    <div class="update-panel">
-        <h1>Reimposta Password</h1>
-        <p class="description">Inserisci la tua nuova password.</p>
+<div class="auth-container">
+    <h2>Aggiorna Password</h2>
+    
+    <form on:submit|preventDefault={updatePassword} class="auth-form">
+        <div class="form-group">
+            <label for="password">Nuova Password</label>
+            <input 
+                id="password" 
+                type="password" 
+                bind:value={password} 
+                required 
+                minlength="6"
+            />
+        </div>
 
-        <form on:submit|preventDefault={handlePasswordUpdate}>
-            <div class="form-group">
-                <label for="newPassword">Nuova Password</label>
-                <input type="password" id="newPassword" bind:value={newPassword} required disabled={loading} minlength="6" />
-            </div>
-            
-            <div class="form-group">
-                <label for="confirmPassword">Conferma Nuova Password</label>
-                <input type="password" id="confirmPassword" bind:value={confirmPassword} required disabled={loading} minlength="6" />
-            </div>
-
-            {#if errorMessage}
-                <p class="error">{errorMessage}</p>
+        <div class="form-group">
+            <label for="confirmPassword">Conferma Password</label>
+            <input 
+                id="confirmPassword" 
+                type="password" 
+                bind:value={confirmPassword} 
+                required 
+            />
+        </div>
+        
+        <button type="submit" class="auth-button" disabled={!supabase}>
+            {#if !supabase}
+                Caricamento...
+            {:else}
+                Aggiorna Password
             {/if}
-            
-            {#if successMessage}
-                <p class="success">{successMessage}</p>
-            {/if}
+        </button>
+    </form>
 
-            <button type="submit" class="update-button" disabled={loading || successMessage}>
-                {#if loading}
-                    Aggiornamento in corso...
-                {:else}
-                    Aggiorna Password
-                {/if}
-            </button>
-        </form>
-    </div>
+    {#if message}
+        <p class:success={isSuccess} class:error={!isSuccess && message !== 'Aggiornamento in corso...'}>
+            {message}
+        </p>
+    {/if}
 </div>
 
 <style>
-    /* Stili CSS copiati per completezza */
-    .update-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        padding: 20px;
-    }
-    .update-panel {
-        background: var(--panel-bg);
-        padding: 40px;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-        max-width: 400px;
-        width: 100%;
-        text-align: center;
-    }
-    h1 {
-        color: var(--text-color-bright);
-        margin-bottom: 15px;
-        font-size: 2rem;
-    }
-    .description {
-        color: var(--text-color-muted);
-        margin-bottom: 25px;
-    }
-    .form-group {
-        text-align: left;
-        margin-bottom: 20px;
-    }
-    label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 600;
-        color: var(--text-color);
-    }
-    input {
-        width: 100%;
-        padding: 12px;
-        border-radius: 8px;
-        border: 1px solid var(--input-border);
-        background: var(--input-bg);
-        color: var(--text-color);
-        box-sizing: border-box;
-    }
-    .update-button {
-        width: 100%;
-        padding: 12px;
-        border: none;
-        border-radius: 8px;
-        font-weight: 700;
-        font-size: 1rem;
-        cursor: pointer;
-        margin-top: 15px;
-        transition: background 0.2s;
-        background: var(--accent-color);
-        color: black;
-    }
-    .update-button:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-    .error {
-        color: var(--error-color);
-        margin-bottom: 15px;
-    }
-    .success {
-        color: var(--success-color);
-        margin-bottom: 15px;
-    }
+    .auth-container { max-width: 400px; margin: 40px auto; padding: 20px; text-align: center; }
+    .auth-form { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
+    .form-group { text-align: left; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+    .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    .auth-button { padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; transition: background-color 0.3s; }
+    .auth-button:hover:not(:disabled) { background-color: #0056b3; }
+    .auth-button:disabled { background-color: #ccc; cursor: not-allowed; }
+    .success { color: green; font-weight: bold; margin-top: 15px; }
+    .error { color: red; font-weight: bold; margin-top: 15px; }
 </style>

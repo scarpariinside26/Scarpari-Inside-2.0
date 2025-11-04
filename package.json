@@ -1,6 +1,6 @@
 {
-"name": "scarpari-discord-bot",
-"version": "0.0.1",
+  "name": "scarpari-discord-bot",
+  "version": "0.0.1",
   "private": true,
   "scripts": {
     "dev": "vite dev",
@@ -17,6 +17,7 @@
   "type": "module",
   "dependencies": {
     "@supabase/supabase-js": "^2.43.4",
-    "@supabase/ssr": "^0.1.0"
+    "@supabase/ssr": "^0.1.0",
+    "@supabase/auth-helpers-sveltekit": "^0.12.0" 
   }
 }

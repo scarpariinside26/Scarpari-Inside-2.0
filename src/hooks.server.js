@@ -1,74 +1,72 @@
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 import { SUPABASE_SERVICE_KEY } from '$env/static/private';
-// Importiamo il client standard per l'admin e il client SSR per le rotte pubbliche
+import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
-import { createServerClient } from '@supabase/ssr'; // <-- Importazione CRUCIALE per i cookie
+import { redirect } from '@sveltejs/kit';
 
-async function handleSupabase({ event, resolve }) {
-    // 1. Client SSR (Client Pubblico per la sessione utente e le API)
-    // QUESTO è il client che deve essere usato per gestire i cookie/sessione
+/**
+ * Funzione di gestione principale per SvelteKit.
+ * Inizializza Supabase SSR client, Supabase Admin client,
+ * e carica la sessione/profilo per renderli disponibili in locals.
+ *
+ * @type {import('@sveltejs/kit').Handle}
+ */
+export const handle = async ({ event, resolve }) => {
+    // 1. Inizializzazione del Client SSR (Gestisce i Cookie)
     event.locals.supabase = createServerClient(
         PUBLIC_SUPABASE_URL,
         PUBLIC_SUPABASE_ANON_KEY,
         {
             cookies: {
-                // PASSAGGIO ESSENZIALE: configuriamo Supabase per leggere/scrivere i cookie HTTP
                 get: (key) => event.cookies.get(key),
                 set: (key, value, options) => {
-                    event.cookies.set(key, value, { ...options, path: '/' });
+                    event.cookies.set(key, value, options);
                 },
                 remove: (key, options) => {
-                    event.cookies.set(key, '', { ...options, path: '/' });
+                    event.cookies.set(key, '', options);
                 },
             },
         }
     );
 
-    // 2. Client Admin (client privato con Service Key) - Nessuna gestione cookie necessaria
+    // 2. Inizializzazione del Client Admin (solo se la chiave è disponibile)
     if (SUPABASE_SERVICE_KEY) {
         event.locals.supabaseAdmin = createClient(
             PUBLIC_SUPABASE_URL,
             SUPABASE_SERVICE_KEY,
             {
-                auth: {
-                    persistSession: false
-                }
+                auth: { persistSession: false }
             }
         );
     } else {
         event.locals.supabaseAdmin = null;
-        console.warn("SUPABASE_SERVICE_KEY non trovata. Il client Admin è disabilitato.");
     }
 
-    // 3. Ottieni la sessione aggiornata
-    // L'uso di getSession sul client SSR attiva l'aggiornamento automatico dei token.
+    // 3. Caricamento della Sessione e del Profilo
+    
+    // getSession() è il modo più robusto per leggere i cookie che sono stati scritti
+    // dal client SSR al punto 1.
     const { data: { session } } = await event.locals.supabase.auth.getSession();
     event.locals.session = session;
-    
-    // Popola locals con l'utente (per comodità)
-    event.locals.user = session?.user;
+    event.locals.user = session?.user || null;
+    event.locals.profile = null; // Inizializza profile a null
 
-    // 4. Caricamento del Profilo (La tua logica personalizzata)
     if (session) {
-        // Carica il profilo (richiede Policy RLS su profili_utenti)
+        // Usa il client SSR (event.locals.supabase) per leggere il profilo.
+        // La RLS Policy che hai creato in precedenza permette la lettura.
         const { data: profile, error } = await event.locals.supabase
             .from('profili_utenti')
             .select('*')
             .eq('user_id', session.user.id)
             .maybeSingle();
 
-        // Controllo l'errore, che potrebbe essere un problema di permessi RLS
-        if (error && error.code !== 'PGRST116') {
-            console.error('Errore nel caricamento del profilo:', error);
-            event.locals.profile = null;
+        if (error) {
+            console.error('Errore nel caricamento del profilo in hooks.server:', error.message);
         } else {
             event.locals.profile = profile;
         }
-    } else {
-        event.locals.profile = null;
     }
 
+    // Prosegui con l'esecuzione delle route (es. +layout.server.js)
     return resolve(event);
-}
-
-export const handle = handleSupabase;
+};

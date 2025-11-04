@@ -3,8 +3,8 @@
     import { writable } from 'svelte/store';
     import { goto } from '$app/navigation';
     
-    // CORREZIONE QUI: Risale i livelli per trovare il file CSS globale
-    import '../../app.css';
+    // CORREZIONE FINALE QUI: Il percorso corretto per i file in /src/ è "../app.css"
+    import '../app.css';
 
     /** @type {import('./$types').LayoutData} */
     export let data;

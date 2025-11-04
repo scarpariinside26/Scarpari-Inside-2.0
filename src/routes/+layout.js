@@ -1,24 +1,35 @@
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
-import { createSupabaseLoadClient } from '@supabase/auth-helpers-sveltekit';
+// Modifica qui: usa createBrowserClient al posto del vecchio helper
+import { createBrowserClient } from '@supabase/ssr'; // Aggiornato l'importazione
 
 /**
  * Carica l'istanza di Supabase e i dati della sessione.
- * Esegue il lato server e poi si reidrata sul client.
- * * @type {import('./$types').LayoutLoad}
+ * @type {import('./$types').LayoutLoad}
  */
 export const load = async ({ fetch, data, depends }) => {
-    // Forza il ricaricamento del layout ogni volta che l'autenticazione cambia (cruciale per il reindirizzamento)
     depends('supabase:auth');
 
-    // Crea l'istanza del client Supabase per la funzione load
-    const supabase = createSupabaseLoadClient({
-        supabaseUrl: PUBLIC_SUPABASE_URL,
-        supabaseKey: PUBLIC_SUPABASE_ANON_KEY,
-        event: { fetch },
-        serverSession: data.session, // Sessione fornita dal server (SSR)
-    });
+    // Usa createBrowserClient da @supabase/ssr
+    const supabase = createBrowserClient(
+        PUBLIC_SUPABASE_URL,
+        PUBLIC_SUPABASE_ANON_KEY,
+        {
+            // Il client SSR richiede i cookie per l'idratazione.
+            // L'istanza createBrowserClient/createSupabaseLoadClient si idrata automaticamente
+            // con la sessione passata da +layout.server.js (data.session).
+            cookies: {
+                get: (key) => data.session ? JSON.parse(data.session)[key] : null,
+                set: (key, value, options) => {
+                    // Questa funzione non dovrebbe essere chiamata durante il caricamento,
+                    // ma è necessaria per la tipizzazione corretta.
+                }
+            },
+        }
+    );
+    
+    // Non devi più passare 'serverSession: data.session' come opzione
+    // perché viene gestito dal wrapper cookies.
 
-    // Ottiene i dati della sessione per lo stato iniziale
     const {
         data: { session },
     } = await supabase.auth.getSession();

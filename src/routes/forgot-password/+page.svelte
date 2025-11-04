@@ -1,61 +1,59 @@
 <script>
-    import { getContext, onMount } from 'svelte'; // <-- AGGIUNTO onMount
     import { goto } from '$app/navigation';
+    import { getContext } from 'svelte';
     import { quartOut } from 'svelte/easing';
     import { fly } from 'svelte/transition';
 
-    // Dichiara la variabile, ma non assegnare immediatamente
-    let supabase; 
-    
-    // Assegna il client Supabase solo dopo che il componente è montato
-    onMount(() => {
-        supabase = getContext('supabase');
-         if (!supabase) {
-             console.error("ERRORE: Supabase non trovato nel contesto.");
-         }
-    });
+    // 1. CHIAMATA IMMEDIATA: Otteniamo Supabase dal Layout
+    let supabase = getContext('supabase'); 
+    let isSupabaseReady = !!supabase; // Aggiungiamo un flag di sicurezza
 
     let email = '';
     let errorMessage = '';
     let successMessage = '';
     let loading = false;
 
-    async function handleRequestReset() {
-        // Controllo di sicurezza
-        if (!supabase) {
-            errorMessage = 'Errore di sistema. Riprova a ricaricare la pagina.';
+    /**
+     * Gestisce la richiesta di reset password.
+     */
+    async function handleResetPassword() {
+        if (!isSupabaseReady) {
+            errorMessage = 'Errore di sistema. Ricarica la pagina.';
             return;
         }
 
         errorMessage = '';
         successMessage = '';
         loading = true;
-        
-        // Invia l'email per il reset della password
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/update-password` // Cambia con il percorso corretto
-        });
 
-        loading = false;
+        // La URL di reindirizzamento DEVE puntare alla pagina di update-password
+        const redirectUrl = `${window.location.origin}/update-password`;
+
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: redirectUrl,
+        });
 
         if (error) {
             errorMessage = error.message;
         } else {
-            successMessage = `Link di reset inviato a ${email}. Controlla la tua casella di posta!`;
-            email = ''; // Pulisci l'input
+            successMessage = 'Link di reset inviato! Controlla la tua email.';
         }
+        
+        loading = false;
     }
 </script>
 
-<div class="reset-container" transition:fly={{ y: 50, duration: 400, easing: quartOut }}>
-    <div class="reset-panel">
+<div class="forgot-container" transition:fly={{ y: 50, duration: 400, easing: quartOut }}>
+    <div class="forgot-panel">
         <h1>Password Dimenticata</h1>
-        <p class="description">Inserisci la tua email per ricevere il link di reset.</p>
 
-        <form on:submit|preventDefault={handleRequestReset}>
+        <form on:submit|preventDefault={handleResetPassword}>
+            <p class="instruction">Inserisci l'indirizzo email associato al tuo account. Ti invieremo un link per resettare la password.</p>
+
             <div class="form-group">
                 <label for="email">Email</label>
-                <input type="email" id="email" bind:value={email} required disabled={loading} />
+                <!-- Disabilita se loading o se Supabase non è pronto -->
+                <input type="email" id="email" bind:value={email} required disabled={loading || !isSupabaseReady} />
             </div>
 
             {#if errorMessage}
@@ -66,11 +64,11 @@
                 <p class="success">{successMessage}</p>
             {/if}
 
-            <button type="submit" class="reset-button" disabled={loading}>
+            <button type="submit" class="reset-button" disabled={loading || !isSupabaseReady}>
                 {#if loading}
                     Invio in corso...
                 {:else}
-                    Invia Link di Reset
+                    Invia link di reset
                 {/if}
             </button>
         </form>
@@ -82,15 +80,15 @@
 </div>
 
 <style>
-    /* Stili CSS, li ho semplificati per la dimostrazione */
-    .reset-container {
+    /* Stili CSS */
+    .forgot-container {
         display: flex;
         justify-content: center;
         align-items: center;
         min-height: 100vh;
         padding: 20px;
     }
-    .reset-panel {
+    .forgot-panel {
         background: var(--panel-bg);
         padding: 40px;
         border-radius: 12px;
@@ -101,12 +99,13 @@
     }
     h1 {
         color: var(--text-color-bright);
-        margin-bottom: 15px;
-        font-size: 2rem;
+        margin-bottom: 20px;
+        font-size: 1.8rem;
     }
-    .description {
-        color: var(--text-color-muted);
+    .instruction {
+        color: var(--text-color);
         margin-bottom: 25px;
+        font-size: 0.9rem;
     }
     .form-group {
         text-align: left;
@@ -136,24 +135,26 @@
         font-size: 1rem;
         cursor: pointer;
         margin-top: 15px;
-        transition: background 0.2s;
+        transition: background 0.2s, opacity 0.2s;
         background: var(--accent-color);
-        color: black;
+        color: white;
     }
     .reset-button:disabled {
-        opacity: 0.6;
+        opacity: 0.5;
         cursor: not-allowed;
     }
     .error {
         color: var(--error-color);
-        margin-bottom: 15px;
+        margin-top: 15px;
+        margin-bottom: 5px;
     }
     .success {
         color: var(--success-color);
-        margin-bottom: 15px;
+        margin-top: 15px;
+        margin-bottom: 5px;
     }
     .help-links {
-        margin-top: 20px;
+        margin-top: 25px;
         font-size: 0.9rem;
     }
     .help-links a {

@@ -4,71 +4,86 @@
     import { quartOut } from 'svelte/easing';
     import { fly } from 'svelte/transition';
 
+    // Variabili di stato
     let supabase;
-
-    // CRUCIALE: Assicurati che supabase sia caricato solo dopo il montaggio
-    onMount(() => {
-        supabase = getContext('supabase');
-        if (!supabase) {
-             console.error("ERRORE: Supabase non trovato nel contesto.");
-         }
-    });
-
+    let isSupabaseReady = false; 
+    
     let email = '';
     let password = '';
     let errorMessage = '';
     let loading = false;
 
-    async function handleLogin() {
+    // CRUCIALE: Assicurati che supabase sia caricato solo dopo il montaggio
+    onMount(() => {
+        supabase = getContext('supabase');
         if (!supabase) {
-            errorMessage = 'Errore di sistema. Ricarica la pagina.';
+            console.error("ERRORE: Supabase non trovato nel contesto.");
+        } else {
+            // IMPOSTA LO STATO SU VERO QUANDO IL CLIENT È PRONTO
+            isSupabaseReady = true; 
+        }
+    });
+
+    /**
+     * Gestisce il login tramite email e password.
+     */
+    async function handleLogin() {
+        if (!isSupabaseReady) { 
+            errorMessage = 'Il sistema non è ancora pronto. Attendi un istante e riprova.';
+            return;
+        }
+        
+        errorMessage = '';
+        loading = true;
+
+        const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+
+        if (error) {
+            errorMessage = error.message;
+        } else {
+            // L'utente viene reindirizzato automaticamente dal listener in +layout.svelte dopo il successo.
+            // Possiamo reindirizzare subito o lasciare che sia il listener a farlo.
+            goto('/');
+        }
+        
+        loading = false;
+    }
+    
+    /**
+     * Gestisce il login tramite Google OAuth.
+     */
+    async function signInWithGoogle() {
+        // CAMBIA IL CONTROLLO DI SICUREZZA
+        if (!isSupabaseReady) { 
+            errorMessage = 'Il sistema non è ancora pronto. Attendi un istante e riprova.';
             return;
         }
 
         errorMessage = '';
         loading = true;
 
-        // Esegui il login con email e password
-        const { error } = await supabase.auth.signInWithPassword({
-            email: email,
-            password: password,
-        });
-
-        loading = false;
-
-        if (error) {
-            // Se l'errore è dovuto a credenziali sbagliate o utente non confermato
-            errorMessage = "Credenziali non valide o utente non confermato. Riprova.";
-            console.error(error.message); // Logga l'errore specifico per debug
-            return;
-        }
-        
-        // Successo: Supabase imposta la sessione.
-        // Reindirizziamo l'utente alla sua dashboard privata.
-        goto('/app');
-    }
-    
-    // Funzione per il login con Google
-    async function signInWithGoogle() {
-        if (!supabase) {
-            errorMessage = 'Errore di sistema. Ricarica la pagina.';
-            return;
-        }
-        
-        loading = true;
-        
+        // NOTA IMPORTANTE: L'URL redirectTo deve corrispondere all'URL
+        // che Supabase si aspetta per il callback OAuth.
+        // In SvelteKit, questo è l'URL di base (es. 'http://localhost:5173/')
+        // che Supabase usa per reindirizzare.
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: `${window.location.origin}/auth/callback`, // Importante per SvelteKit
+                redirectTo: `${window.location.origin}/auth/callback`,
+                skipBrowserRedirect: false, // Lascia che Supabase gestisca il reindirizzamento al provider
             },
         });
-        
+
         if (error) {
-             errorMessage = error.message;
+            errorMessage = error.message;
+            // Nel caso di successo, l'utente viene reindirizzato, quindi loading non va resettato qui.
+            // Lo resettiamo solo in caso di errore immediato prima del reindirizzamento.
+            loading = false;
         }
-        loading = false;
-        // La chiamata OAuth reindirizzerà l'utente, non c'è bisogno di un goto manuale qui.
+        // Se tutto va bene, l'utente viene reindirizzato alla pagina di Google.
     }
 
 </script>
@@ -81,19 +96,22 @@
         <form on:submit|preventDefault={handleLogin}>
             <div class="form-group">
                 <label for="email">Email</label>
-                <input type="email" id="email" bind:value={email} required disabled={loading} />
+                <!-- DISABILITA SE NON PRONTO -->
+                <input type="email" id="email" bind:value={email} required disabled={loading || !isSupabaseReady} />
             </div>
             
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" bind:value={password} required disabled={loading} minlength="6" />
+                <!-- DISABILITA SE NON PRONTO -->
+                <input type="password" id="password" bind:value={password} required disabled={loading || !isSupabaseReady} minlength="6" />
             </div>
 
             {#if errorMessage}
                 <p class="error">{errorMessage}</p>
             {/if}
 
-            <button type="submit" class="login-button" disabled={loading}>
+            <!-- DISABILITA SE NON PRONTO -->
+            <button type="submit" class="login-button" disabled={loading || !isSupabaseReady}> 
                 {#if loading}
                     Accesso in corso...
                 {:else}
@@ -105,54 +123,40 @@
         <div class="separator">O continua con</div>
         
         <!-- Bottone Google Login -->
-        <button on:click={signInWithGoogle} class="google-button" disabled={loading}>
-            <svg class="google-icon" viewBox="0 0 512 512" width="20" height="20">
-                <path fill="#4285F4" d="M386 400c45-35 65-74 65-108 0-77-78-140-153-140s-153 63-153 140c0 34 20 73 65 108l-15 13 15-13c-45 35-65 74-65 108 0 77 78 140 153 140s153-63 153-140c0-34-20-73-65-108l15-13-15 13z"/>
-                <path fill="#34A853" d="M194 340a120 120 0 1 0 0-240 120 120 0 0 0 0 240z"/>
-                <path fill="#FBBC05" d="M256 186c-39 0-71 31-71 70s32 70 71 70 71-31 71-70-32-70-71-70z"/>
-                <path fill="#EA4335" d="M186 256c0-39 32-70 71-70s71 31 71 70-32 70-71 70-71-31-71-70z"/>
-            </svg>
+        <!-- DISABILITA SE NON PRONTO -->
+        <button on:click={signInWithGoogle} class="google-button" disabled={loading || !isSupabaseReady}> 
+            <svg class="google-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="18px"><path fill="#FFC107" d="M43.61,20.08c0-1.79-.15-3.53-.47-5.22H24v9.85h10.94c-.58,2.98-2.28,5.48-4.88,7.18v6.79h8.73C42.86,39.06,44.97,34.2,43.61,20.08z"/><path fill="#FF3D00" d="M24,44c6.73,0,12.33-2.23,16.44-6.04l-8.73-6.79c-2.42,1.62-5.5,2.58-9.04,2.58c-6.91,0-12.79-4.66-14.88-10.91H1V32.91C4.3,39.9,13.43,44,24,44z"/><path fill="#4CAF50" d="M10.12,28.09c-.47-1.3-.73-2.68-.73-4.09s.27-2.79,.73-4.09V12.91H1C.36,15.63,0,18.5,0,21.91s.36,6.28,1,9.37L10.12,28.09z"/><path fill="#1976D2" d="M24,4c5.1,0,9.7,1.82,13.38,5.17l7.7-7.7C37.28,1.48,31.25,0,24,0C13.43,0,4.3,4.1,1,12.91l9.12,7.09C11.21,11.85,17.09,7.19,24,7.19z"/></svg>
             Accedi con Google
         </button>
 
         <p class="help-links">
-            <a href="/forgot-password">Password dimenticata?</a> | <a href="/signup">Crea un account</a>
+            <a href="/forgot-password">Password dimenticata?</a> | 
+            <a href="/signup">Crea un account</a>
         </p>
     </div>
 </div>
 
 <style>
-    /* Definisci delle variabili di colore di base per un look moderno e scuro */
-    :root {
-        --panel-bg: #2d3748; /* Grigio-blu scuro */
-        --accent-color: #66b3ff; /* Blu brillante per accenti */
-        --text-color: #e2e8f0; /* Testo chiaro */
-        --text-color-bright: #ffffff; /* Testo molto chiaro */
-        --input-bg: #1a202c; /* Sfondo input molto scuro */
-        --input-border: #4a5568; /* Bordo input grigio scuro */
-        --error-color: #f56565; /* Rosso per errori */
-    }
-
+    /* Stili CSS */
     .login-container {
         display: flex;
         justify-content: center;
         align-items: center;
         min-height: 100vh;
         padding: 20px;
-        background-color: #1a202c; /* Sfondo generale scuro */
-        color: var(--text-color);
+        background-color: var(--background-color, #1a202c);
     }
     .login-panel {
-        background: var(--panel-bg);
+        background: var(--panel-bg, #2d3748);
         padding: 40px;
         border-radius: 12px;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
         max-width: 400px;
         width: 100%;
         text-align: center;
     }
     h1 {
-        color: var(--text-color-bright);
+        color: var(--text-color-bright, #ffffff);
         margin-bottom: 25px;
         font-size: 2rem;
     }
@@ -164,24 +168,18 @@
         display: block;
         margin-bottom: 8px;
         font-weight: 600;
-        color: var(--text-color);
+        color: var(--text-color, #e2e8f0);
     }
     input {
         width: 100%;
         padding: 12px;
         border-radius: 8px;
-        border: 1px solid var(--input-border);
-        background: var(--input-bg);
-        color: var(--text-color);
+        border: 1px solid var(--input-border, #4a5568);
+        background: var(--input-bg, #1a202c);
+        color: var(--text-color, #e2e8f0);
         box-sizing: border-box;
-        transition: border-color 0.2s;
     }
-    input:focus {
-        border-color: var(--accent-color);
-        outline: none;
-    }
-    
-    .login-button, .google-button {
+    .login-button {
         width: 100%;
         padding: 12px;
         border: none;
@@ -190,73 +188,71 @@
         font-size: 1rem;
         cursor: pointer;
         margin-top: 15px;
-        transition: transform 0.1s, background-color 0.2s;
+        transition: background 0.2s, opacity 0.2s;
+        background: var(--accent-color, #4299e1);
+        color: white;
     }
-    
-    .login-button {
-        background: var(--accent-color);
-        color: #1a202c;
+    .login-button:disabled, .google-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
-    .login-button:hover:not(:disabled) {
-        background: #4a90e2; 
+    .error {
+        color: var(--error-color, #f56565);
+        margin-bottom: 15px;
     }
-
+    .separator {
+        margin: 25px 0;
+        font-size: 0.9rem;
+        color: var(--text-color, #a0aec0);
+        position: relative;
+    }
+    .separator::before, .separator::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        width: 40%;
+        height: 1px;
+        background: var(--input-border, #4a5568);
+    }
+    .separator::before {
+        left: 0;
+    }
+    .separator::after {
+        right: 0;
+    }
     .google-button {
-        background: #ffffff;
-        color: #1a202c;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-top: 10px;
-        border: 1px solid #ddd;
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--input-border, #4a5568);
+        border-radius: 8px;
+        font-weight: 600;
+        background: var(--input-bg, #1a202c);
+        color: var(--text-color, #e2e8f0);
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .google-button:hover {
+        background: var(--input-border, #4a5568);
     }
     .google-icon {
         margin-right: 10px;
+        width: 20px;
+        height: 20px;
     }
-    .google-button:hover:not(:disabled) {
-        background: #f0f0f0;
-    }
-    
-    .login-button:disabled, .google-button:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-    
-    .error {
-        color: var(--error-color);
-        margin-bottom: 15px;
-    }
-    
     .help-links {
-        margin-top: 25px;
+        margin-top: 30px;
         font-size: 0.9rem;
+        color: var(--text-color, #e2e8f0);
     }
     .help-links a {
-        color: var(--accent-color);
+        color: var(--accent-color, #4299e1);
         text-decoration: none;
+        transition: color 0.2s;
     }
-    
-    .separator {
-        display: flex;
-        align-items: center;
-        text-align: center;
-        margin: 20px 0;
-        color: var(--text-color);
-        font-size: 0.85rem;
-    }
-
-    .separator::before,
-    .separator::after {
-        content: '';
-        flex: 1;
-        border-bottom: 1px solid var(--input-border);
-    }
-
-    .separator:not(:empty)::before {
-        margin-right: .5em;
-    }
-
-    .separator:not(:empty)::after {
-        margin-left: .5em;
+    .help-links a:hover {
+        color: var(--accent-color-hover, #63b3ed);
     }
 </style>

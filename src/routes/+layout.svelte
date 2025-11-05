@@ -3,67 +3,74 @@
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
 
-    // Il prop `data` contiene { supabase, session } restituito da +layout.js
-    /** @type {import('./$types').LayoutData} */
     export let data;
 
-    // 1. INIETTA SUPABASE: Imposta il client Supabase nel contesto.
-    // Questo è il passaggio che risolve "Multiple GoTrueClient instances detected"
-    setContext('supabase', data.supabase);
-
-    // Variabile reattiva per tenere traccia della sessione.
-    let { session } = data;
+    // 🆕 VARIABILE PER TELEGRAM USER
+    let tgUser = null;
+    let session = null;
     let isLoading = true;
 
-    // 2. LISTENER PER LA SESSIONE: Gestisce il reindirizzamento
     onMount(() => {
         isLoading = false;
 
-        // Listener che reagisce a OGNI cambio di stato (login, logout, refresh del token)
-        const { data: authListener } = data.supabase.auth.onAuthStateChange(
-            (event, newSession) => {
-                session = newSession; // Aggiorna la sessione reattivamente
-
-                if (newSession && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-                    // L'utente si è autenticato o ha aggiornato la sessione, reindirizziamo alla dashboard
-                    if (window.location.pathname.startsWith('/login') || window.location.pathname.startsWith('/signup')) {
-                        goto('/');
+        // 🆕 TELEGRAM AUTH - Sostituisce Supabase Auth
+        if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand();
+            
+            tgUser = Telegram.WebApp.initDataUnsafe.user;
+            
+            if (tgUser) {
+                // 🆕 Crea sessione fittizia per compatibilità
+                session = {
+                    user: {
+                        id: tgUser.id,
+                        email: tgUser.username ? `${tgUser.username}@telegram.user` : `user${tgUser.id}@telegram.user`,
+                        user_metadata: {
+                            full_name: `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim(),
+                            avatar_url: tgUser.photo_url
+                        }
                     }
-                } else if (!newSession && event === 'SIGNED_OUT') {
-                    // L'utente ha effettuato il logout, assicuriamoci che non sia su pagine protette
-                    if (!['/login', '/signup', '/forgot-password'].includes(window.location.pathname)) {
-                         goto('/login');
+                };
+                console.log('🎯 Utente Telegram autenticato:', tgUser);
+            }
+        } else {
+            console.log('⚠️ Non in ambiente Telegram - Modalità sviluppo');
+            // 🆕 Session fittizia per sviluppo
+            session = {
+                user: {
+                    id: 'dev-user-123',
+                    email: 'dev@telegram.user',
+                    user_metadata: {
+                        full_name: 'Utente Sviluppo',
+                        avatar_url: null
                     }
                 }
-            }
-        );
+            };
+        }
 
-        // Funzione di pulizia: interrompe l'ascolto quando il componente viene distrutto
-        return () => {
-            authListener.subscription.unsubscribe();
-        };
+        // 🆕 MANTIENI SUPABASE PER DATI (ma non per auth)
+        if (data.supabase) {
+            setContext('supabase', data.supabase);
+        }
     });
 
-    // Funzione di logout client-side, più semplice e rapida.
-    export async function handleLogout() {
-        if (data.supabase) {
-            await data.supabase.auth.signOut();
-            // Il listener sopra gestirà il reindirizzamento a /login
-        }
-    }
+    // 🆕 RIMUOVI la funzione di logout (non serve in Telegram)
 </script>
 
 <div class="app-layout">
-    <!-- Navbar o Intestazione con pulsante di Logout -->
+    <!-- 🆕 HEADER SEMPLIFICATO - Rimuovi login/logout -->
     <header class="navbar">
-        <a href="/" class="logo">My App</a>
+        <a href="/" class="logo">Scarpari Inside</a>
         <nav>
             {#if session}
-                <span class="user-email">{session.user.email}</span>
-                <button on:click={handleLogout} class="logout-btn">Logout</button>
-            {:else}
-                <a href="/login" class="nav-link">Login</a>
-                <a href="/signup" class="nav-link">Sign Up</a>
+                <span class="user-email">
+                    {#if tgUser}
+                        👤 {tgUser.first_name} {tgUser.last_name || ''}
+                    {:else}
+                        👤 {session.user.user_metadata.full_name}
+                    {/if}
+                </span>
             {/if}
         </nav>
     </header>
@@ -113,29 +120,6 @@
     .user-email {
         font-size: 0.9rem;
         color: var(--text-color);
-    }
-    .nav-link {
-        color: var(--accent-color);
-        text-decoration: none;
-        padding: 5px 10px;
-        border-radius: 4px;
-        transition: background-color 0.2s;
-    }
-    .nav-link:hover {
-        background-color: #3f587a;
-    }
-    .logout-btn {
-        background-color: #e53e3e;
-        color: white;
-        border: none;
-        padding: 8px 15px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: 600;
-        transition: background-color 0.2s;
-    }
-    .logout-btn:hover {
-        background-color: #c53030;
     }
     .content {
         padding: 20px;

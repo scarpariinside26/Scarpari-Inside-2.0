@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Event App - Setup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'telegram-blue': '#3390ec',
+                        'telegram-bg': 'var(--tg-theme-bg-color, #f4f4f4)',
+                        'telegram-primary': 'var(--tg-theme-button-color, #3390ec)',
+                        'telegram-text': 'var(--tg-theme-text-color, #000000)',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Caricamento SDK Telegram Web App -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Firebase/Firestore Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Variabili Globali del Canvas (MANDATORY)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app;
+        let db;
+        let auth;
+        let authState = 'loading'; // 'loading', 'setup', 'ready', 'error'
+        let currentUserData = null; // Dati dell'utente da Firestore
+        let telegramUser = null; // Dati utente da Telegram SDK
+        let userId = null; // ID utente Firestore/Supabase
+
+        setLogLevel('Debug');
+
+        // Funzione per inizializzare Firebase
+        async function initializeFirebase() {
+            try {
+                if (Object.keys(firebaseConfig).length === 0) {
+                    console.error("FIREBASE ERROR: firebaseConfig non disponibile. Uso Supabase/Auth anonimo.");
+                    // Fallback se il config non è disponibile, anche se in Canvas è obbligatorio
+                    return; 
+                }
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Listener per l'autenticazione Firebase (per ottenere l'UID)
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log("Firestore UID:", userId);
+                        handleTelegramAuth(); // Inizia l'autenticazione Telegram solo dopo l'auth Firebase
+                    } else {
+                        userId = null;
+                        authState = 'error';
+                        render();
+                    }
+                });
+            } catch (e) {
+                console.error("Errore durante l'inizializzazione o l'autenticazione Firebase:", e);
+                authState = 'error';
+                render();
+            }
+        }
+        
+        // ***************************************************************
+        // PARTE CRITICA: AUTENTICAZIONE E REGISTRAZIONE TELEGRAM JIT
+        // ***************************************************************
+
+        // Funzione per verificare initData lato SERVER (simulata qui)
+        async function verifyInitData(initData) {
+            // Estrazione simulata dell'utente da initData (per il client)
+            const params = new URLSearchParams(initData);
+            const userJson = params.get('user');
+            
+            if (userJson) {
+                const user = JSON.parse(userJson);
+                console.log("Telegram User Data:", user);
+                
+                // Mappa dati Telegram
+                return {
+                    telegramId: user.id.toString(),
+                    firstName: user.first_name || 'Utente',
+                    lastName: user.last_name || '',
+                    username: user.username || null
+                };
+            }
+            throw new Error("Dati utente Telegram non trovati o non validi.");
+        }
+
+        // Gestisce il flusso di autenticazione e setup JIT
+        async function handleTelegramAuth() {
+            if (!window.Telegram?.WebApp?.initData) {
+                console.error("Non eseguito come Telegram Mini App o dati non disponibili.");
+                authState = 'error';
+                render();
+                return;
+            }
+
+            try {
+                // 1. Verifica e estrazione dell'ID Telegram
+                const initData = window.Telegram.WebApp.initData;
+                telegramUser = await verifyInitData(initData); // Simulazione verifica server
+                
+                if (!telegramUser || !telegramUser.telegramId) {
+                    throw new Error("Errore di verifica Telegram.");
+                }
+
+                // 2. Controllo Just-In-Time (JIT) in Firestore
+                // Il path usa telegramId come ID del documento per l'accesso diretto
+                const userRef = doc(db, `artifacts/${appId}/users/${userId}/profili`, telegramUser.telegramId);
+                const docSnap = await getDoc(userRef);
+
+                if (docSnap.exists()) {
+                    // UTENTE ESISTENTE (Auth Ready)
+                    currentUserData = docSnap.data();
+                    console.log("Utente esistente. Caricamento Dashboard.");
+                    authState = 'ready';
+                } else {
+                    // NUOVO UTENTE (Setup Required)
+                    console.log("Nuovo utente. Richiesta Setup iniziale (Nickname e Email).");
+                    authState = 'setup';
+                }
+
+            } catch (error) {
+                console.error("Errore durante l'autenticazione Telegram:", error);
+                authState = 'error';
+            }
+            render();
+        }
+
+        // Gestisce la registrazione JIT del nuovo utente
+        async function handleSetup() {
+            const nicknameInput = document.getElementById('nickname-input');
+            const emailInput = document.getElementById('email-input');
+            
+            const nickname = nicknameInput.value.trim();
+            const email = emailInput.value.trim();
+
+            // Validazione
+            if (!nickname) {
+                alert("Il nickname è obbligatorio!");
+                return;
+            }
+            if (!email || !email.includes('@') || email.length < 5) {
+                alert("L'indirizzo email non è valido!");
+                return;
+            }
+
+            try {
+                // 1. Crea il documento del profilo in Firestore
+                const userRef = doc(db, `artifacts/${appId}/users/${userId}/profili`, telegramUser.telegramId);
+                const newUserProfile = {
+                    telegram_id: telegramUser.telegramId,
+                    email: email, // CAMPO AGGIUNTO SU RICHIESTA UTENTE
+                    nickname: nickname,
+                    first_name: telegramUser.firstName,
+                    username: telegramUser.username,
+                    data_registrazione: new Date().toISOString(),
+                    // Qui verranno aggiunti altri campi come squadra_predefinita, ecc.
+                };
+                
+                await setDoc(userRef, newUserProfile);
+                currentUserData = newUserProfile;
+
+                // 2. Successo, passa alla Dashboard
+                console.log("Registrazione JIT completata. Email:", email);
+                authState = 'ready';
+                render();
+
+            } catch (error) {
+                console.error("Errore durante la registrazione JIT:", error);
+                alert("Errore nella registrazione. Riprova.");
+            }
+        }
+
+        // Funzione di rendering principale
+        function render() {
+            const container = document.getElementById('app-container');
+            let content = '';
+            let bgColor = 'bg-telegram-bg';
+
+            if (window.Telegram?.WebApp?.initData) {
+                // Tenta di usare i colori del tema Telegram
+                bgColor = window.Telegram.WebApp.themeParams.bg_color || '#f4f4f4';
+                document.body.style.backgroundColor = bgColor;
+            }
+            
+            // Logica di Routing (Basata sullo Stato)
+            switch (authState) {
+                case 'loading':
+                    content = `
+                        <div class="flex flex-col items-center justify-center h-48">
+                            <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-telegram-blue"></div>
+                            <p class="mt-4 text-telegram-text">Caricamento e Autenticazione Telegram...</p>
+                        </div>
+                    `;
+                    break;
+                
+                case 'setup':
+                    const suggestedNickname = telegramUser?.firstName || 'Il tuo Nickname';
+                    content = `
+                        <div class="p-6 max-w-sm mx-auto bg-white shadow-lg rounded-xl flex flex-col items-center space-y-4">
+                            <h2 class="text-xl font-bold text-telegram-blue">Benvenuto/a, ${telegramUser.firstName}!</h2>
+                            <p class="text-gray-600 text-center">Abbiamo bisogno di un paio di dettagli per completare il tuo profilo.</p>
+                            
+                            <!-- NUOVO CAMPO: Email -->
+                            <input type="email" id="email-input" placeholder="Indirizzo Email (Obbligatorio)" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-telegram-blue focus:border-telegram-blue text-telegram-text" />
+
+                            <!-- CAMPO ESISTENTE: Nickname -->
+                            <input type="text" id="nickname-input" placeholder="${suggestedNickname}" value="${suggestedNickname}"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-telegram-blue focus:border-telegram-blue text-telegram-text" />
+
+                            <button onclick="window.handleSetup()"
+                                class="w-full py-2 px-4 bg-telegram-primary text-white font-semibold rounded-lg shadow-md hover:opacity-90 transition duration-150">
+                                Salva Profilo e Inizia
+                            </button>
+                            <p class="text-xs text-gray-400">ID Telegram: ${telegramUser.telegramId}</p>
+                        </div>
+                    `;
+                    break;
+
+                case 'ready':
+                    const nicknameReady = currentUserData?.nickname || 'Ospite';
+                    const emailReady = currentUserData?.email || 'N/A';
+                    content = `
+                        <div class="p-6 space-y-4">
+                            <h1 class="text-3xl font-extrabold text-telegram-blue">Dashboard Eventi</h1>
+                            <div class="bg-white p-4 rounded-lg shadow-md">
+                                <p class="text-telegram-text">Benvenuto/a, **${nicknameReady}**!</p>
+                                <p class="text-sm text-gray-500">Email: ${emailReady}</p>
+                                <p class="text-sm text-gray-500">ID Telegram: ${currentUserData.telegram_id}</p>
+                            </div>
+                            
+                            <h2 class="text-xl font-bold text-telegram-text mt-6">Prossimi Eventi:</h2>
+                            <div class="bg-yellow-100 p-3 rounded-lg border-l-4 border-yellow-500 text-sm text-gray-700">
+                                <p>✅ **Setup Completato!** Ora abbiamo Email e Nickname salvati nel profilo.</p>
+                                <p>Prossimo passo: Integrazione dell'elenco degli eventi e della logica di iscrizione.</p>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                
+                case 'error':
+                    content = `
+                        <div class="p-6 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg">
+                            <h2 class="font-bold">Errore di Connessione</h2>
+                            <p>Impossibile autenticarsi. Assicurati che l'app sia avviata correttamente da Telegram.</p>
+                        </div>
+                    `;
+                    break;
+            }
+
+            container.innerHTML = content;
+        }
+
+        // Esposizione delle funzioni globali per il rendering e gli eventi onclick
+        window.render = render;
+        window.handleSetup = handleSetup;
+
+        // Inizializza l'applicazione all'avvio del modulo
+        window.onload = initializeFirebase; 
+        
+    </script>
+</head>
+<body class="min-h-screen p-4" style="background-color: #f4f4f4;">
+    <div id="app-container">
+        <!-- Il contenuto verrà iniettato qui -->
+    </div>
+
+    <noscript>
+        <div class="p-6 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg">
+            Questa applicazione richiede JavaScript.
+        </div>
+    </noscript>
+</body>
+</html>

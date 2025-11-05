@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Event App - Setup</title>
+    <title>Telegram Event App - Setup & Eventi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -14,6 +14,8 @@
                         'telegram-bg': 'var(--tg-theme-bg-color, #f4f4f4)',
                         'telegram-primary': 'var(--tg-theme-button-color, #3390ec)',
                         'telegram-text': 'var(--tg-theme-text-color, #000000)',
+                        'telegram-hint': 'var(--tg-theme-hint-color, #999999)',
+                        'telegram-secondary-bg': 'var(--tg-theme-secondary-bg-color, #ffffff)',
                     }
                 }
             }
@@ -25,13 +27,18 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // Aggiunto runTransaction per l'iscrizione sicura
+        import { getFirestore, doc, setLogLevel, collection, query, onSnapshot, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Import esplicito
 
         // Variabili Globali del Canvas (MANDATORY)
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
+        // Path pubblici e privati
+        const EVENT_COLLECTION_PATH = `artifacts/${appId}/public/data/events`;
+        
         let app;
         let db;
         let auth;
@@ -39,6 +46,8 @@
         let currentUserData = null; // Dati dell'utente da Firestore
         let telegramUser = null; // Dati utente da Telegram SDK
         let userId = null; // ID utente Firestore/Supabase
+        let events = []; // Stato: Lista degli eventi
+        let unsubscribeEvents = null; // Funzione per disattivare l'ascoltatore in tempo reale
 
         setLogLevel('Debug');
 
@@ -46,8 +55,7 @@
         async function initializeFirebase() {
             try {
                 if (Object.keys(firebaseConfig).length === 0) {
-                    console.error("FIREBASE ERROR: firebaseConfig non disponibile. Uso Supabase/Auth anonimo.");
-                    // Fallback se il config non è disponibile, anche se in Canvas è obbligatorio
+                    console.error("FIREBASE ERROR: firebaseConfig non disponibile. Uso Auth anonimo.");
                     return; 
                 }
                 app = initializeApp(firebaseConfig);
@@ -80,22 +88,88 @@
         }
         
         // ***************************************************************
+        // GESTIONE DATI EVENTI
+        // ***************************************************************
+
+        // Funzione per creare dati demo se la collezione è vuota
+        async function seedEventsIfEmpty() {
+            const eventsCol = collection(db, EVENT_COLLECTION_PATH);
+            const snapshot = await getDocs(eventsCol);
+
+            if (snapshot.empty) {
+                console.log("Collezione eventi vuota. Popolo con dati demo.");
+                
+                const demoEvents = [
+                    {
+                        name: "Torneo di Calcio Serale",
+                        description: "Partita amichevole 7v7, tutti invitati. Ci vediamo al campo B.",
+                        date: new Date(Date.now() + 86400000).toISOString(), // Domani
+                        telegram_group_id: "Gruppo_Calcio_Demo", 
+                        max_participants: 5, // Piccolo per testare il limite
+                        participants: [] // Lista degli UID/TelegramID iscritti
+                    },
+                    {
+                        name: "Cena Sociale 'Pizza & Code'",
+                        description: "Ritrovo per chiacchierare di tecnologia e mangiare un'ottima pizza.",
+                        date: new Date(Date.now() + 7 * 86400000).toISOString(), // Tra 7 giorni
+                        telegram_group_id: "Gruppo_Cena_Demo",
+                        max_participants: 10,
+                        participants: [] 
+                    }
+                ];
+
+                for (const event of demoEvents) {
+                    await setDoc(doc(eventsCol), event);
+                }
+            }
+        }
+
+        // Funzione per l'ascolto in tempo reale della lista degli eventi
+        function listenToEvents() {
+            if (!db) {
+                console.error("Firestore non inizializzato.");
+                return;
+            }
+
+            if (unsubscribeEvents) {
+                unsubscribeEvents();
+            }
+
+            const eventsRef = collection(db, EVENT_COLLECTION_PATH);
+            const eventsQuery = query(eventsRef); 
+
+            unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
+                const newEvents = [];
+                snapshot.forEach(doc => {
+                    newEvents.push({ id: doc.id, ...doc.data() });
+                });
+                
+                newEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                events = newEvents;
+                console.log("Eventi aggiornati:", events.length);
+                render(); // Ridisegna l'interfaccia con i nuovi dati
+            }, (error) => {
+                console.error("Errore nell'ascolto degli eventi:", error);
+                showErrorMessage("Errore di sincronizzazione eventi. Riprova più tardi.");
+            });
+        }
+
+
+        // ***************************************************************
         // PARTE CRITICA: AUTENTICAZIONE E REGISTRAZIONE TELEGRAM JIT
         // ***************************************************************
 
         // Funzione per verificare initData lato SERVER (simulata qui)
         async function verifyInitData(initData) {
-            // Estrazione simulata dell'utente da initData (per il client)
             const params = new URLSearchParams(initData);
             const userJson = params.get('user');
             
             if (userJson) {
                 const user = JSON.parse(userJson);
-                console.log("Telegram User Data:", user);
-                
-                // Mappa dati Telegram
+                // NOTA: Telegram ID deve essere un numero, lo convertiamo in stringa 
                 return {
-                    telegramId: user.id.toString(),
+                    telegramId: user.id.toString(), 
                     firstName: user.first_name || 'Utente',
                     lastName: user.last_name || '',
                     username: user.username || null
@@ -123,7 +197,6 @@
                 }
 
                 // 2. Controllo Just-In-Time (JIT) in Firestore
-                // Il path usa telegramId come ID del documento per l'accesso diretto
                 const userRef = doc(db, `artifacts/${appId}/users/${userId}/profili`, telegramUser.telegramId);
                 const docSnap = await getDoc(userRef);
 
@@ -132,9 +205,11 @@
                     currentUserData = docSnap.data();
                     console.log("Utente esistente. Caricamento Dashboard.");
                     authState = 'ready';
+                    await seedEventsIfEmpty(); // Assicura che ci siano eventi
+                    listenToEvents(); // Avvia l'ascolto degli eventi
                 } else {
                     // NUOVO UTENTE (Setup Required)
-                    console.log("Nuovo utente. Richiesta Setup iniziale (Nickname e Email).");
+                    console.log("Nuovo utente. Richiesta Setup iniziale (Email).");
                     authState = 'setup';
                 }
 
@@ -153,13 +228,13 @@
             const nickname = nicknameInput.value.trim();
             const email = emailInput.value.trim();
 
-            // Validazione
+            // Validazione (Base)
             if (!nickname) {
-                alert("Il nickname è obbligatorio!");
+                showErrorMessage("Per favore, inserisci un nickname valido.");
                 return;
             }
             if (!email || !email.includes('@') || email.length < 5) {
-                alert("L'indirizzo email non è valido!");
+                showErrorMessage("Per favore, inserisci un indirizzo email valido.");
                 return;
             }
 
@@ -168,12 +243,11 @@
                 const userRef = doc(db, `artifacts/${appId}/users/${userId}/profili`, telegramUser.telegramId);
                 const newUserProfile = {
                     telegram_id: telegramUser.telegramId,
-                    email: email, // CAMPO AGGIUNTO SU RICHIESTA UTENTE
+                    email: email, 
                     nickname: nickname,
                     first_name: telegramUser.firstName,
                     username: telegramUser.username,
                     data_registrazione: new Date().toISOString(),
-                    // Qui verranno aggiunti altri campi come squadra_predefinita, ecc.
                 };
                 
                 await setDoc(userRef, newUserProfile);
@@ -182,27 +256,144 @@
                 // 2. Successo, passa alla Dashboard
                 console.log("Registrazione JIT completata. Email:", email);
                 authState = 'ready';
+                await seedEventsIfEmpty(); 
+                listenToEvents(); 
                 render();
 
             } catch (error) {
                 console.error("Errore durante la registrazione JIT:", error);
-                alert("Errore nella registrazione. Riprova.");
+                showErrorMessage("Errore nella registrazione. Riprova: " + error.message);
+            }
+        }
+        
+        // Funzione helper per l'UI (al posto di alert)
+        function showErrorMessage(message) {
+            const errorDiv = document.getElementById('error-message');
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.classList.remove('hidden');
+                errorDiv.classList.add('bg-red-500', 'text-white');
+                errorDiv.classList.remove('bg-green-500'); // Pulisce il successo precedente
+                setTimeout(() => errorDiv.classList.add('hidden'), 5000);
+            } else {
+                console.warn("UI Error:", message);
             }
         }
 
-        // Funzione di rendering principale
+        function showSuccessMessage(message) {
+            const errorDiv = document.getElementById('error-message');
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.classList.remove('hidden');
+                errorDiv.classList.add('bg-green-500', 'text-white');
+                errorDiv.classList.remove('bg-red-500');
+                setTimeout(() => errorDiv.classList.add('hidden'), 5000);
+            } else {
+                console.log("UI Success:", message);
+            }
+        }
+
+        // Funzione di formattazione della data
+        function formatEventDate(dateString) {
+            const date = new Date(dateString);
+            const options = { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' };
+            return date.toLocaleDateString('it-IT', options).replace(',', ' alle');
+        }
+
+        // ***************************************************************
+        // GESTIONE ISCRIZIONE/DISISCRIZIONE CON TRANSAZIONE
+        // ***************************************************************
+        async function handleSubscription(eventId, isSubscribed) {
+            if (!telegramUser || !db) {
+                showErrorMessage("Stato non pronto per l'operazione. Riprova.");
+                return;
+            }
+
+            const eventRef = doc(db, EVENT_COLLECTION_PATH, eventId);
+            const telegramId = telegramUser.telegramId;
+            let successMessage = '';
+
+            try {
+                // Esecuzione della Transazione
+                await runTransaction(db, async (transaction) => {
+                    const eventDoc = await transaction.get(eventRef);
+                    if (!eventDoc.exists()) {
+                        throw "L'evento non esiste più!";
+                    }
+
+                    const eventData = eventDoc.data();
+                    const participants = eventData.participants || [];
+                    const maxParticipants = eventData.max_participants || Infinity;
+
+                    let newParticipants;
+                    
+                    if (isSubscribed) {
+                        // --- OPERAZIONE DI DISISCRIZIONE ---
+                        if (!participants.includes(telegramId)) {
+                            throw "Non Iscritto: Non risulti iscritto/a a questo evento.";
+                        }
+                        
+                        newParticipants = participants.filter(id => id !== telegramId);
+                        successMessage = `Disiscrizione completata con successo dall'evento: ${eventData.name}.`;
+                    
+                    } else {
+                        // --- OPERAZIONE DI ISCRIZIONE ---
+                        // 1. Check Limite Massimo
+                        if (participants.length >= maxParticipants) {
+                            throw "Evento Pieno: Massimo di partecipanti raggiunto.";
+                        }
+
+                        // 2. Check Doppia Iscrizione (sicurezza)
+                        if (participants.includes(telegramId)) {
+                            throw "Già Iscritto: Sei già nella lista dei partecipanti.";
+                        }
+
+                        // 3. Esecuzione dell'iscrizione
+                        newParticipants = [...participants, telegramId];
+                        successMessage = `Iscrizione confermata! Benvenuto/a all'evento: ${eventData.name}.`;
+                    }
+                    
+                    transaction.update(eventRef, { participants: newParticipants });
+                    
+                    return successMessage; // Ritorna il messaggio di successo
+                });
+
+                // Se la transazione ha successo
+                showSuccessMessage(successMessage);
+                
+                console.log(`SIMULAZIONE: Stato utente ${telegramId} aggiornato nel gruppo Telegram.`);
+
+            } catch (e) {
+                if (typeof e === 'string' && (e.startsWith("Evento Pieno") || e.startsWith("Già Iscritto") || e.startsWith("Non Iscritto"))) {
+                    // Errore gestito e specifico per l'utente
+                    showErrorMessage(e.split(': ')[1]); 
+                } else {
+                    // Errore generico (es. network o permessi)
+                    console.error("Errore durante la transazione:", e);
+                    showErrorMessage("Errore di rete/server. Riprova (Verifica la console per i dettagli).");
+                }
+            }
+        }
+
+
+        // ***************************************************************
+        // RENDERING UI
+        // ***************************************************************
         function render() {
             const container = document.getElementById('app-container');
             let content = '';
-            let bgColor = 'bg-telegram-bg';
-
-            if (window.Telegram?.WebApp?.initData) {
-                // Tenta di usare i colori del tema Telegram
-                bgColor = window.Telegram.WebApp.themeParams.bg_color || '#f4f4f4';
-                document.body.style.backgroundColor = bgColor;
-            }
             
-            // Logica di Routing (Basata sullo Stato)
+            // Imposta lo sfondo in base al tema Telegram
+            const bgColor = window.Telegram?.WebApp?.themeParams?.bg_color || '#f4f4f4';
+            document.body.style.backgroundColor = bgColor;
+            
+            // Messaggio di errore/successo globale
+            const statusMessageHtml = `
+                <div id="error-message" class="hidden fixed top-0 left-0 right-0 p-3 text-white font-bold text-center z-50 rounded-b-lg shadow-xl transition-all duration-300" role="alert">
+                    Messaggio di stato
+                </div>
+            `;
+
             switch (authState) {
                 case 'loading':
                     content = `
@@ -216,44 +407,99 @@
                 case 'setup':
                     const suggestedNickname = telegramUser?.firstName || 'Il tuo Nickname';
                     content = `
-                        <div class="p-6 max-w-sm mx-auto bg-white shadow-lg rounded-xl flex flex-col items-center space-y-4">
+                        ${statusMessageHtml}
+                        <div class="p-6 max-w-sm mx-auto bg-telegram-secondary-bg shadow-lg rounded-xl flex flex-col items-center space-y-4 border border-gray-100">
                             <h2 class="text-xl font-bold text-telegram-blue">Benvenuto/a, ${telegramUser.firstName}!</h2>
-                            <p class="text-gray-600 text-center">Abbiamo bisogno di un paio di dettagli per completare il tuo profilo.</p>
+                            <p class="text-telegram-hint text-center text-sm">Completa il tuo profilo per accedere agli eventi.</p>
                             
-                            <!-- NUOVO CAMPO: Email -->
+                            <!-- Campo Email -->
                             <input type="email" id="email-input" placeholder="Indirizzo Email (Obbligatorio)" required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-telegram-blue focus:border-telegram-blue text-telegram-text" />
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-telegram-blue focus:border-telegram-blue text-telegram-text bg-white" />
 
-                            <!-- CAMPO ESISTENTE: Nickname -->
+                            <!-- Campo Nickname -->
                             <input type="text" id="nickname-input" placeholder="${suggestedNickname}" value="${suggestedNickname}"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-telegram-blue focus:border-telegram-blue text-telegram-text" />
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-telegram-blue focus:border-telegram-blue text-telegram-text bg-white" />
 
                             <button onclick="window.handleSetup()"
-                                class="w-full py-2 px-4 bg-telegram-primary text-white font-semibold rounded-lg shadow-md hover:opacity-90 transition duration-150">
-                                Salva Profilo e Inizia
+                                class="w-full py-3 px-4 bg-telegram-primary text-white font-bold rounded-xl shadow-lg hover:opacity-90 transition duration-150 transform hover:scale-[1.01]">
+                                Salva Profilo
                             </button>
-                            <p class="text-xs text-gray-400">ID Telegram: ${telegramUser.telegramId}</p>
+                            <p class="text-xs text-telegram-hint">UID Firestore: ${userId ? userId.substring(0, 8) + '...' : 'N/A'}</p>
                         </div>
                     `;
                     break;
 
                 case 'ready':
                     const nicknameReady = currentUserData?.nickname || 'Ospite';
-                    const emailReady = currentUserData?.email || 'N/A';
+                    
+                    const eventsHtml = events.length === 0 
+                        ? `<p class="text-telegram-hint text-center py-8">Nessun evento in programma al momento.</p>`
+                        : events.map(event => {
+                            const dateFormatted = formatEventDate(event.date);
+                            const participants = event.participants || [];
+                            const participantsCount = participants.length;
+                            const isSubscribed = participants.includes(telegramUser.telegramId);
+                            const isFull = participantsCount >= event.max_participants;
+
+                            let buttonClass = '';
+                            let buttonText = '';
+                            let buttonAction = `window.handleSubscription('${event.id}', ${isSubscribed})`; // Passa lo stato attuale
+
+                            if (isSubscribed) {
+                                // Se iscritto, il pulsante è per disiscriversi
+                                buttonClass = 'bg-red-500 text-white hover:bg-red-600';
+                                buttonText = 'Disiscriviti';
+                            } else if (isFull) {
+                                // Se pieno, il pulsante è disabilitato
+                                buttonClass = 'bg-gray-400 text-gray-700 cursor-not-allowed';
+                                buttonText = 'Completo';
+                                buttonAction = '';
+                            } else {
+                                // Altrimenti, è il pulsante Iscriviti
+                                buttonClass = 'bg-telegram-primary text-white hover:opacity-90';
+                                buttonText = 'Iscriviti';
+                            }
+                            
+                            // Mostra lo stato di "Quasi pieno"
+                            const statusColor = isFull ? 'text-red-500' : (participantsCount / event.max_participants > 0.8 ? 'text-yellow-600' : 'text-telegram-hint');
+
+
+                            return `
+                                <div class="bg-telegram-secondary-bg p-4 rounded-xl shadow-md space-y-2 border border-gray-100">
+                                    <h3 class="text-lg font-extrabold text-telegram-text">${event.name}</h3>
+                                    <p class="text-sm font-semibold text-telegram-blue flex items-center">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        ${dateFormatted}
+                                    </p>
+                                    <p class="text-telegram-hint text-sm">${event.description}</p>
+                                    <div class="flex justify-between items-center pt-2 border-t border-gray-100 mt-2">
+                                        <p class="text-sm ${statusColor} font-semibold">
+                                            Iscritti: ${participantsCount}/${event.max_participants}
+                                        </p>
+                                        <button class="py-2 px-4 rounded-lg text-sm font-semibold transition duration-150 transform hover:scale-[1.02] ${buttonClass}"
+                                            onclick="${buttonAction}">
+                                            ${buttonText}
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+
                     content = `
-                        <div class="p-6 space-y-4">
-                            <h1 class="text-3xl font-extrabold text-telegram-blue">Dashboard Eventi</h1>
-                            <div class="bg-white p-4 rounded-lg shadow-md">
-                                <p class="text-telegram-text">Benvenuto/a, **${nicknameReady}**!</p>
-                                <p class="text-sm text-gray-500">Email: ${emailReady}</p>
-                                <p class="text-sm text-gray-500">ID Telegram: ${currentUserData.telegram_id}</p>
+                        <div class="p-4 space-y-6">
+                            ${statusMessageHtml}
+                            <div class="bg-telegram-secondary-bg p-4 rounded-xl shadow-lg border-l-4 border-telegram-blue">
+                                <p class="text-telegram-text font-semibold">Profilo attivo: <span class="text-telegram-blue">${nicknameReady}</span></p>
+                                <p class="text-sm text-telegram-hint">Telegram ID: ${telegramUser.telegramId}</p>
                             </div>
                             
-                            <h2 class="text-xl font-bold text-telegram-text mt-6">Prossimi Eventi:</h2>
-                            <div class="bg-yellow-100 p-3 rounded-lg border-l-4 border-yellow-500 text-sm text-gray-700">
-                                <p>✅ **Setup Completato!** Ora abbiamo Email e Nickname salvati nel profilo.</p>
-                                <p>Prossimo passo: Integrazione dell'elenco degli eventi e della logica di iscrizione.</p>
+                            <h2 class="text-2xl font-bold text-telegram-text">Prossimi Eventi</h2>
+                            
+                            <div class="space-y-4">
+                                ${eventsHtml}
                             </div>
+
+                            <p class="text-xs text-telegram-hint text-center pt-4">Iscrizioni e disiscrizioni gestite tramite transazioni Firestore.</p>
                         </div>
                     `;
                     break;
@@ -263,6 +509,7 @@
                         <div class="p-6 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg">
                             <h2 class="font-bold">Errore di Connessione</h2>
                             <p>Impossibile autenticarsi. Assicurati che l'app sia avviata correttamente da Telegram.</p>
+                            <p class="text-xs pt-2">Errore interno (Firestore UID: ${userId ? userId.substring(0, 8) + '...' : 'N/A'})</p>
                         </div>
                     `;
                     break;
@@ -274,13 +521,14 @@
         // Esposizione delle funzioni globali per il rendering e gli eventi onclick
         window.render = render;
         window.handleSetup = handleSetup;
+        window.handleSubscription = handleSubscription; 
 
         // Inizializza l'applicazione all'avvio del modulo
         window.onload = initializeFirebase; 
         
     </script>
 </head>
-<body class="min-h-screen p-4" style="background-color: #f4f4f4;">
+<body class="min-h-screen" style="font-family: 'Inter', sans-serif;">
     <div id="app-container">
         <!-- Il contenuto verrà iniettato qui -->
     </div>

@@ -4,14 +4,19 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": ".svelte-kit/output/client"
+        "distDir": ".svelte-kit/vercel"
       }
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/$1"
     }
-  ]
+  ],
+  "functions": {
+    "app/svelte-kit/**": {
+      "runtime": "nodejs18.x"
+    }
+  }
 }

@@ -1,9 +1,12 @@
 {
   "name": "scarpari-inside-svelte",
-  "type": "module",
+  "type": "module", 
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build", 
+    "build": "vite build",
     "preview": "vite preview"
+  },
+  "dependencies": {
+    "@sveltejs/adapter-auto": "^3.0.0"
   }
 }

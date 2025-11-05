@@ -1,5 +1,7 @@
 <script>
-    import { onMount, getContext } from 'svelte'; // <-- NUOVO: Necessario per l'autenticazione Telegram
+    import { onMount } from 'svelte';
+    // ATTENZIONE: getContext è stato rimosso in quanto causava l'errore "Function called outside component initialization".
+    // Presumibilmente, l'istanza Supabase è disponibile tramite la prop 'data'.
     import TopNavBar from '$lib/components/TopNavBar.svelte';
     import BottomNavBar from '$lib/components/BottomNavBar.svelte';
     import { fade } from 'svelte/transition';
@@ -13,52 +15,64 @@
     
     // Dati caricati dal server
     // 'user' è la variabile chiave per determinare lo stato di autenticazione
-    const { liveEvent, teams, isAdmin, user } = data;
+    // Estraiamo 'supabase' da 'data' se è lì, altrimenti assumiamo che sia globale
+    const { liveEvent, teams, isAdmin, user, supabase } = data; // Suppongo che supabase sia in 'data'
     
     // --- VARIABILI DI STATO ---
     let showEditModal = false;
     let isEventExpanded = false;
-    // La partita è considerata finita se l'evento è valido e la data è passata (gestito lato server)
     let isMatchFinished = liveEvent && new Date(liveEvent.date) < new Date(); 
     let unreadNotifications = 2; 
     
     const LOGO_SRC = "/Scarpari Inside simplelogo_2023.png"; 
 
-    // --- TELEGRAM LOGIN STATE (NUOVO) ---
-    const supabase = getContext('supabase'); // Ottiene l'istanza Supabase dal layout
+    // --- TELEGRAM LOGIN STATE ---
     let loading = true;
     let message = 'Inizializzazione Mini App Telegram...';
     let isTelegramReady = false;
 
     // --- FUNZIONI INTERAZIONE UI ---
+    // Usiamo WebApp.showAlert invece di alert()
+    function showAlert(text) {
+        if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+            window.Telegram.WebApp.showAlert(text);
+        } else {
+            // Fallback per il testing locale
+            console.log("ALERT (Local): " + text);
+        }
+    }
+
     function openEditModal(event) { event.stopPropagation(); showEditModal = true; }
     function closeEditModal() { showEditModal = false; }
     function toggleEventExpansion() { isEventExpanded = !isEventExpanded; }
     function handleAdminAction(action) { 
-        // In un'app reale: invia una richiesta POST al server per eseguire l'azione
         console.log(`Azione amministrativa: ${action} per l'evento ${liveEvent.title}`); 
         closeEditModal(); 
-        alert(`Azione amministrativa: ${action} per l'evento ${liveEvent.title}`);
+        showAlert(`Azione amministrativa: ${action} per l'evento ${liveEvent.title}`);
     }
     function startVoting() { goto('/vote'); }
     
     // Funzioni per i nuovi pulsanti di cornice
-    function goToGeneralChat() { alert('Naviga alla Chat Generale.'); }
+    function goToGeneralChat() { showAlert('Naviga alla Chat Generale.'); }
     function showNotifications() { 
-        alert('Visualizza il dettaglio delle notifiche.'); 
+        showAlert('Visualizza il dettaglio delle notifiche.'); 
         unreadNotifications = 0; 
     }
 
     // Dati fittizi per la Modale (da sostituire con dati reali se necessario)
     const availableLocations = ['Campo A', 'Campo B', 'Campo C', 'Stadio Comunale'];
     
-    // --- TELEGRAM LOGIN FUNCTIONS (NUOVO) ---
+    // --- TELEGRAM LOGIN FUNCTIONS ---
 
     /**
      * Carica lo script di Telegram Web App.
      */
     function loadTelegramScript() {
         return new Promise((resolve) => {
+            if (typeof window === 'undefined') {
+                // Preveniamo l'esecuzione lato server
+                return resolve();
+            }
             if (window.Telegram?.WebApp) {
                 isTelegramReady = true;
                 return resolve();
@@ -122,18 +136,23 @@
             message = 'Autenticazione Supabase in corso...';
 
             // 3. Usa il Custom Token per autenticare il client Supabase
-            // SvelteKit dovrebbe aggiornare automaticamente lo stato 'user' in 'data' dopo questo.
-            const { error: authError } = await supabase.auth.signInWithCustomToken(accessToken);
+            // Usiamo il client Supabase iniettato da SvelteKit (dalla prop 'data')
+            if (supabase && supabase.auth) {
+                const { error: authError } = await supabase.auth.signInWithCustomToken(accessToken);
 
-            if (authError) {
-                message = `Errore di login Supabase: ${authError.message}`;
-                console.error('Errore signInWithCustomToken:', authError);
+                if (authError) {
+                    message = `Errore di login Supabase: ${authError.message}`;
+                    console.error('Errore signInWithCustomToken:', authError);
+                    loading = false;
+                    return;
+                }
+
+                // 4. Successo: lo stato 'user' in 'data' si aggiornerà e mostrerà la dashboard.
+                message = 'Accesso riuscito! Caricamento dashboard...';
+            } else {
+                message = 'Errore: Oggetto Supabase non disponibile nel componente.';
                 loading = false;
-                return;
             }
-
-            // 4. Successo: lo stato 'user' in 'data' si aggiornerà e mostrerà la dashboard.
-            message = 'Accesso riuscito! Caricamento dashboard...';
 
         } catch (e) {
             console.error('Errore di rete/processo di login:', e);
@@ -144,6 +163,12 @@
 
 
     onMount(async () => {
+        // Aggiungi un controllo per garantire che siamo nel browser
+        if (typeof window === 'undefined') {
+            loading = false;
+            return;
+        }
+        
         // Esegui la sequenza di login solo se l'utente NON è loggato
         if (!user) {
             await loadTelegramScript();
@@ -151,35 +176,45 @@
             if (isTelegramReady) {
                 const WebApp = window.Telegram.WebApp;
                 
-                // Inizializza l'interfaccia (importante per le Mini App)
+                // === QUESTO BLOCCO ERA CORRETTO, DEVE RESTARE QUI (DENTRO onMount) ===
                 WebApp.ready();
                 WebApp.expand(); 
+                
+                // OPTIONAL: Impostiamo i colori in base al tema di Telegram (buona pratica)
+                if (WebApp.themeParams) {
+                    // Imposta i colori della barra superiore
+                    WebApp.setHeaderColor(WebApp.themeParams.header_bg_color || 'bg_color'); 
+                    // Imposta i colori della barra inferiore (se usi BottomNavBar di Telegram)
+                    WebApp.setButtonTextColor(WebApp.themeParams.button_text_color || 'text_color');
+                }
+                // ====================================================================
 
                 const initData = WebApp.initData;
                 
                 if (initData) {
-                    handleTelegramLogin(initData);
+                    // Questa chiamata usa l'istanza 'supabase' ottenuta dalla prop 'data'
+                    await handleTelegramLogin(initData);
                 } else {
                     loading = false;
                     message = 'Per accedere, avvia l\'app dal bot Telegram.';
                 }
-               
+                
             } else {
-                 loading = false;
-                 message = 'Errore: impossibile caricare Telegram Web App SDK. Controlla la connessione.';
+                loading = false;
+                message = 'Errore: impossibile caricare Telegram Web App SDK. Controlla la connessione.';
             }
         } else {
-             // Utente già loggato, non mostrare lo spinner di login
-             loading = false; 
+            // Utente già loggato, non mostrare lo spinner di login
+            loading = false; 
         }
     });
 
     function getTelegramUser() {
-         if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-             const user = window.Telegram.WebApp.initDataUnsafe.user;
-             return JSON.stringify(user, null, 2);
-         }
-         return 'Nessun utente Telegram disponibile (contesto esterno).';
+        if (typeof window !== 'undefined' && window.Telegram?.WebApp?.initDataUnsafe?.user) {
+            const user = window.Telegram.WebApp.initDataUnsafe.user;
+            return JSON.stringify(user, null, 2);
+        }
+        return 'Nessun utente Telegram disponibile (contesto esterno o non loggato).';
     }
     // --- FINE TELEGRAM LOGIN FUNCTIONS ---
 
@@ -293,6 +328,26 @@
         color: #48bb78;
         margin-top: 10px;
     }
+
+    /* Stili per l'espansione dei dettagli dell'evento */
+    .event-details-content {
+        margin-top: 15px;
+        padding: 10px 15px;
+        background: rgba(255, 255, 255, 0.05); /* Sfondo leggero per distinguere i dettagli */
+        border-radius: 0 0 12px 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .detail-row {
+        margin-bottom: 8px;
+        font-size: 0.85rem;
+    }
+    .description-text {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px dashed rgba(255, 255, 255, 0.1);
+        font-size: 0.8rem;
+        line-height: 1.4;
+    }
 </style>
 
 <svelte:head>
@@ -304,9 +359,11 @@
     <!-- DASHBOARD CONTENT: MOSTRATO SOLO SE L'UTENTE È LOGGATO -->
     <!-- ============================================== -->
     <div class="app-container">
-        <TopNavBar />
+        <!-- NOTA: TopNavBar è un tuo componente, lascio l'import -->
+        <TopNavBar /> 
 
         <div class="logo-area">
+            <!-- Ho sostituito alert() con una funzione che usa WebApp.showAlert() -->
             <button class="logo-side-button placeholder" on:click={goToGeneralChat} title="Chat Generale">Chat</button>
             <img src={LOGO_SRC} alt="Scarpa Inside Logo" class="main-logo"/>
             <button class="logo-side-button placeholder" on:click={showNotifications} title="Notifiche">
@@ -347,7 +404,7 @@
                                     <button class="edit-button-compact" on:click={openEditModal} title="Modifica Evento">🖊️</button>
                                 {/if}
                                 <!-- Pulsante Chat/Info Evento (ex-Discord) -->
-                                <a href={"#"} target="_blank" class="discord-link-compact" on:click|stopPropagation title="Chat Evento">
+                                <a href={"#"} target="_blank" class="discord-link-compact" on:click|stopPropagation={() => showAlert('Naviga alla chat specifica dell\'evento.')} title="Chat Evento">
                                     <span style="font-size: 1.1rem;">🗨️</span>
                                 </a>
                             </div>
@@ -371,9 +428,9 @@
                     {/if}
                 </div>
             {:else}
-                 <div class="event-live-card-wrapper" style="grid-column: 1 / -1; text-align: center; color: var(--secondary-accent);">
+               <div class="event-live-card-wrapper" style="grid-column: 1 / -1; text-align: center; color: var(--secondary-accent);">
                     Nessun evento live programmato o errore nel caricamento.
-                 </div>
+               </div>
             {/if}
 
             {#each teams as team (team.id)}
@@ -396,7 +453,8 @@
             
         </div>
         
-        <BottomNavBar />
+        <!-- NOTA: BottomNavBar è un tuo componente, lascio l'import -->
+        <BottomNavBar /> 
     </div>
 
     {#if showEditModal && isAdmin}
@@ -422,6 +480,7 @@
                     </select>
                 </div>
                 
+                <!-- Ho sostituito alert() con una funzione che usa WebApp.showAlert() -->
                 <button class="action-button save-button" on:click={() => handleAdminAction('Salva Modifiche Evento')}>
                     💾 SALVA MODIFICHE
                 </button>

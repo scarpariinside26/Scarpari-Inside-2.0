@@ -31,11 +31,11 @@
   },
   "dependencies": {
     "@fontsource/inter": "^5.0.8",
-    "@lucia-auth/adapter-mongoose": "^4.0.0",
+    "@lucia-auth/adapter-mongoose": "^3.0.1",
     "@supabase/supabase-js": "^2.39.7",
     "@supabase/ssr": "^0.1.0",
     "@types/nodemailer": "^6.4.14",
-    "lucia": "^3.0.1",
+    "lucia": "^2.7.7",
     "mongoose": "^8.0.3",
     "nodemailer": "^6.9.7",
     "oslo": "^1.2.0"

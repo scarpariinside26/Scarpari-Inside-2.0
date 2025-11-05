@@ -1,7 +1,9 @@
-{
+}
   "name": "scarpari-inside-2.0",
   "version": "0.0.1",
-  "type": "module",
+    "engines": {
+    "node": "18.x"
+   "type": "module",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",

@@ -1,10 +1,8 @@
 import { redirect } from '@sveltejs/kit';
 
 // Rotte accessibili a TUTTI, anche se non autenticati.
-// La root ('/') è stata aggiunta per evitare un reindirizzamento loop subito dopo il login
-// quando il client SvelteKit non ha ancora elaborato la sessione fresca.
 const publicRoutes = [
-    '/', // Aggiunto per permettere al callback di Supabase di atterrare e stabilizzare la sessione
+    '/', 
     '/login',
     '/signup',
     '/auth/callback',
@@ -15,41 +13,59 @@ const publicRoutes = [
 /** @type {import('./$types').LayoutServerLoad} */
 export async function load({ locals, url }) {
 
-    // 1. Dati utente globali e sessione
-    // NOTA: Con il corretto hooks.server.js, questa riga non è strettamente necessaria qui,
-    // ma funge da robusta doppia verifica per la sessione più aggiornata.
+    // -----------------------------------------------------------
+    // 1. GESTIONE DEL TOKEN SSO (Telegram/JWT)
+    // -----------------------------------------------------------
+    // Cattura il JWT temporaneo passato dall'URL dopo un login SSO riuscito.
+    // Questo token servirà al client (+layout.svelte) per stabilire la sessione.
+    const supabaseToken = url.searchParams.get('supabaseToken');
+    
+    // -----------------------------------------------------------
+    // 2. RECUPERO DATI UTENTE GLOBALI (Standard Supabase Auth)
+    // -----------------------------------------------------------
+    
+    // Recupera la sessione dal cookie (gestito da locals.supabase tramite hooks.server.js)
     const {
         data: { session },
     } = await locals.supabase.auth.getSession();
 
-    // Questi dati dovrebbero essere popolati in src/hooks.server.js
+    // Dati aggiuntivi (popolati tipicamente in src/hooks.server.js)
     const user = locals.user || session?.user || null;
     const profile = locals.profile || null;
     const isAdmin = profile?.is_admin === true;
 
-    // 2. Logica di reindirizzamento
+    // -----------------------------------------------------------
+    // 3. LOGICA DI REINDIRIZZAMENTO
+    // -----------------------------------------------------------
+    
     if (!session) {
         // Se NON c'è sessione e l'utente NON sta provando ad accedere a una route pubblica...
         if (!publicRoutes.includes(url.pathname)) {
-            // Reindirizza forzatamente al login.
-            // Se l'utente tenta di accedere a una pagina protetta, viene reindirizzato
-            // e la destinazione originale viene salvata.
-            const targetPath = url.pathname === '/' ? '/app' : url.pathname;
-            throw redirect(303, `/login?redirected=true&from=${encodeURIComponent(targetPath)}`);
+            // Aggiungi un'eccezione per il token SSO: se è presente,
+            // permetti il caricamento anche se la sessione server non è ancora stabilita.
+            if (!supabaseToken) {
+                // Reindirizza forzatamente al login.
+                const targetPath = url.pathname === '/' ? '/app' : url.pathname;
+                throw redirect(303, `/login?redirected=true&from=${encodeURIComponent(targetPath)}`);
+            }
         }
     } else {
         // Se C'È sessione ma l'utente tenta di accedere a pagine di autenticazione...
         if (url.pathname.startsWith('/login') || url.pathname.startsWith('/signup')) {
             // Reindirizza alla dashboard privata.
-            throw redirect(303, '/'); // Reindirizza alla home (che dovrebbe essere protetta/dashboard)
+            throw redirect(303, '/'); 
         }
     }
 
-    // 3. Ritorna i dati della sessione e del profilo a tutte le pagine
+    // -----------------------------------------------------------
+    // 4. RITORNA I DATI AL CLIENT (+layout.svelte)
+    // -----------------------------------------------------------
     return {
         session,
         user,
         profile,
-        isAdmin
+        isAdmin,
+        // Passa il token SSO al client (se presente nell'URL)
+        supabaseToken 
     };
 }

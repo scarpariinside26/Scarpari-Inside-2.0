@@ -2,7 +2,8 @@ import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/publi
 import { SUPABASE_SERVICE_KEY } from '$env/static/private';
 import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
-import { redirect } from '@sveltejs/kit';
+
+// Rimosso: import { redirect } from '@sveltejs/kit';
 
 /**
  * Funzione di gestione principale per SvelteKit.
@@ -43,17 +44,12 @@ export const handle = async ({ event, resolve }) => {
     }
 
     // 3. Caricamento della Sessione e del Profilo
-    
-    // getSession() è il modo più robusto per leggere i cookie che sono stati scritti
-    // dal client SSR al punto 1.
     const { data: { session } } = await event.locals.supabase.auth.getSession();
     event.locals.session = session;
     event.locals.user = session?.user || null;
     event.locals.profile = null; // Inizializza profile a null
 
     if (session) {
-        // Usa il client SSR (event.locals.supabase) per leggere il profilo.
-        // La RLS Policy che hai creato in precedenza permette la lettura.
         const { data: profile, error } = await event.locals.supabase
             .from('profili_utenti')
             .select('*')
@@ -67,6 +63,6 @@ export const handle = async ({ event, resolve }) => {
         }
     }
 
-    // Prosegui con l'esecuzione delle route (es. +layout.server.js)
+    // Prosegui con l'esecuzione delle route
     return resolve(event);
 };

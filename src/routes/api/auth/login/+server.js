@@ -1,94 +1,73 @@
-import { json, error } from '@sveltejs/kit';
-// *** CORREZIONE QUI ***: Usiamo SUPABASE_SERVICE_KEY come definito in Vercel.
-import { SUPABASE_SERVICE_KEY } from '$env/static/private';
-// Assumiamo che PUBLIC_SUPABASE_URL sia statico e pubblico
-import { PUBLIC_SUPABASE_URL } from '$env/static/public';
-import { createClient } from '@supabase/supabase-js';
+import { createHmac } from 'crypto';
+// Importiamo la variabile d'ambiente dal contesto SvelteKit/Vercel (static/private)
+import { TELEGRAM_BOT_TOKEN } from '$env/static/private';
 
-// Crea un client Supabase con la Service Key (ex Service Role Key)
-const supabaseAdmin = createClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-    auth: {
-        autoRefreshToken: false,
-        persistSession: false
+
+/**
+ * Verifica l'autenticità dei dati di avvio (initData) di Telegram.
+ * * La verifica è fondamentale per la sicurezza: garantisce che i dati dell'utente (ID, nome)
+ * non siano stati manomessi e provengano veramente da un server Telegram.
+ * * @param {string} initData - La stringa di dati di avvio passata dalla Mini App.
+ * @returns {{isValid: boolean, userId: string | null, username: string | null}} - Oggetto con stato di validità, ID utente e Username.
+ */
+export function verifyTelegramAuth(initData) {
+    if (!TELEGRAM_BOT_TOKEN) {
+        // Se si verifica in locale, assicurarsi che TELEGRAM_BOT_TOKEN sia nel .env
+        console.error("ERRORE DI CONFIGURAZIONE: TELEGRAM_BOT_TOKEN non è definito (Controlla $env/static/private).");
+        return { isValid: false, userId: null, username: null };
     }
-});
 
-// --- FUNZIONE MOCK PER LA VERIFICA DEL TOKEN ESTERNO (ES. TELEGRAM) ---
-// In un ambiente reale, questa funzione dovrebbe fare una chiamata API esterna 
-// o usare il segreto di Telegram per verificare l'integrità del 'token'.
-async function verifyExternalToken(token) {
-    // Logica di verifica complessa...
-    if (token === "valid_telegram_sso_token") {
-        return {
-            valid: true,
-            external_user_id: 'telegram_12345678', // L'ID utente univoco fornito dall'SSO
-            username: 'UtenteTelegramSSO'
-        };
+    // 1. Decodifica e Analizza i Dati
+    const urlParams = new URLSearchParams(initData);
+    
+    const hash = urlParams.get('hash');
+    if (!hash) {
+        console.error("Dati non validi: Hash mancante.");
+        return { isValid: false, userId: null, username: null };
     }
-    return { valid: false };
-}
-// ------------------------------------------------------------------------
 
-/** @type {import('./$types').RequestHandler} */
-export async function POST({ request, locals }) {
-    try {
-        const data = await request.json();
+    // 2. Raccogli e Ordina i Dati di Controllo
+    // Filtra 'hash' e ricrea la stringa di controllo ordinata alfabeticamente
+    const dataCheckString = Array.from(urlParams.entries())
+        .filter(([key]) => key !== 'hash')
+        .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+        .map(([key, value]) => `${key}=${value}`)
+        .join('\n');
         
-        const { token } = data;
-        
-        if (!token) {
-            throw error(400, 'Missing authentication token.');
-        }
+    // 3. Calcola la Chiave Segreta (Secret Key)
+    // Chiave radice: SHA256 del token del bot, usato per l'HMAC.
+    const secretKey = createHmac('sha256', 'WebAppData')
+        .update(TELEGRAM_BOT_TOKEN)
+        .digest();
 
-        // 1. Verifica il token SSO esterno
-        const verificationResult = await verifyExternalToken(token);
+    // 4. Calcola l'Hash Previsto (Expected Hash)
+    const expectedHash = createHmac('sha256', secretKey)
+        .update(dataCheckString)
+        .digest('hex');
 
-        if (!verificationResult.valid) {
-            throw error(401, 'Invalid or expired external authentication token.');
-        }
-
-        const { external_user_id, username } = verificationResult;
-
-        // 2. Utilizza supabaseAdmin per aggiornare o creare l'utente nel tuo database
-        // Nota: Non possiamo creare utenti direttamente in auth.users senza un'email/password,
-        // ma possiamo gestire il profilo in una tabella 'profiles' pubblica.
-        // Questo è il punto in cui dimostriamo l'uso della Service Key.
-
-        const { data: profile, error: upsertError } = await supabaseAdmin
-            .from('profiles')
-            .upsert(
-                { 
-                    id: external_user_id, // Usiamo l'ID esterno come chiave primaria
-                    username: username,
-                    last_login: new Date().toISOString()
-                },
-                { onConflict: 'id' } // Se l'ID esiste, aggiorna invece di inserire
-            )
-            .select()
-            .single();
-
-        if (upsertError) {
-            console.error('Supabase Upsert Error:', upsertError);
-            throw error(500, 'Failed to process user profile via admin client.');
-        }
-
-        // 3. Risposta: L'utente è stato verificato e il profilo è aggiornato.
-        // Ora il client deve usare un metodo alternativo (es. Custom JWT o link) 
-        // per stabilire una sessione Supabase sul lato client.
-        
-        return json({ 
-            success: true, 
-            message: "External token validated and user profile updated.",
-            user_id: external_user_id,
-            profile: profile
-        });
-
-    } catch (e) {
-        // Gestione degli errori di tipo 'error' di SvelteKit o errori generici
-        if (e.status) {
-            throw e; // Rilancia errori SvelteKit con stato (400, 401, ecc.)
-        }
-        console.error('API Error in login endpoint:', e);
-        throw error(500, 'Internal server error: Check server logs and environment variables.');
+    // 5. Confronto Finale
+    const isValid = expectedHash === hash;
+    
+    if (!isValid) {
+        console.error("VERIFICA FALLITA: Hash calcolato non corrisponde a hash fornito.");
     }
+
+    // 6. Estrai ID e Nome Utente solo se valido
+    let userId = null;
+    let username = null;
+    
+    const userJson = urlParams.get('user');
+    
+    if (isValid && userJson) {
+        try {
+            const user = JSON.parse(userJson);
+            userId = user.id.toString(); 
+            // Preferiamo 'username' ma usiamo 'first_name' se il campo è assente
+            username = user.username || user.first_name || 'Utente TG'; 
+        } catch (e) {
+            console.error("Errore nel parsing dei dati utente JSON:", e);
+        }
+    }
+    
+    return { isValid, userId, username };
 }

@@ -1,13 +1,16 @@
-import adapter from '@sveltejs/adapter-vercel'; // <--- ORA IMPORTIAMO QUELLO GIUSTO
-import { vitePreprocess } from '@sveltejs/kit/vite';
+import adapter from '@sveltejs/adapter-vercel';
+// Importiamo il preprocessore standalone 'svelte-preprocess', che abbiamo aggiunto in package.json.
+// Questo è il fix per risolvere l'errore 'vitePreprocess' che non viene esportato correttamente
+// nell'ambiente di compilazione di Vercel/SvelteKit.
+import preprocess from 'svelte-preprocess'; 
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
-	// Preprocessore per supportare script/style
-	preprocess: vitePreprocess(),
+	// Utilizziamo il preprocessore esterno per garantire stabilità
+	preprocess: preprocess(), 
 
 	kit: {
-		// Target di deployment: Vercel
+		// Stiamo utilizzando l'adapter Vercel per il deployment
 		adapter: adapter(), 
 	}
 };

@@ -1,15 +1,21 @@
-// Questo file inizializza il client Supabase.
-// ATTENZIONE: Devi sostituire i placeholder con le tue credenziali Supabase.
+// Questo client è destinato ESCLUSIVAMENTE all'utilizzo lato server (es. actions, +page.server.js).
+// NON deve contenere o importare alcun codice Svelte/client-side.
 
 import { createClient } from '@supabase/supabase-js';
+import { env } from '$env/static/private'; 
 
-// ** DA SOSTITUIRE CON LE TUE CREDENZIALI SUPABASE **
-// Se stai utilizzando SvelteKit, è fortemente consigliato usare variabili d'ambiente 
-// (ad esempio, VITE_PUBLIC_SUPABASE_URL e VITE_PUBLIC_SUPABASE_ANON_KEY).
-const SUPABASE_URL = 'INSERISCI_QUI_IL_TUO_SUPABASE_PROJECT_URL';
-const SUPABASE_ANON_KEY = 'INSERISCI_QUI_LA_TUA_CHIAVE_PUBBLICA_ANONIMA';
+// Nota: In questo contesto, è comune usare la SERVICE_KEY per bypassare le RLS,
+// ma l'uso della chiave anonima NON pubblica è anche possibile se l'RLS lo permette.
 
-// Inizializza il client Supabase
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) {
+    console.error('ATTENZIONE: La variabile SUPABASE_SERVICE_KEY è fondamentale per il server. Controlla il file .env.');
+    throw new Error('Configurazione Supabase Server mancante.');
+}
 
-console.log("Supabase Client Inizializzato. Ricorda di inserire le tue credenziali reali.");
+// Creiamo un client che non deve gestire la sessione tramite cookie,
+// ma che può essere usato per operazioni "Admin" o generiche lato server.
+export const supabaseServerClient = createClient(
+    env.SUPABASE_URL,
+    env.SUPABASE_SERVICE_KEY, // Usa la chiave Service Role per il massimo accesso
+    { auth: { persistSession: false } } // Disabilita la persistenza della sessione (non necessaria per questo tipo di client)
+);
